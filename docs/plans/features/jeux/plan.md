@@ -36,3 +36,11 @@ si tu l'ignores, ne passe jamais devant un rendu, une vidéo, une visite ou la p
 | 01 | [chunk-01-bowling.md](chunk-01-bowling.md) | compile, rendu vérifié en PNG, à tester en vrai |
 | 02 | [chunk-02-evenements.md](chunk-02-evenements.md) | compile, rendu vérifié en PNG, à tester en vrai |
 | 03 | [chunk-03-deck-reseau.md](chunk-03-deck-reseau.md) | compile, rendu vérifié en PNG, serveur testé ; à tester en vrai |
+
+## Déploiement (2026-10-01)
+- Serveur : conteneur `louann-bande` reconstruit sur le VPS (`/home/ubuntu/louann-bande`, port 3060, seul service touché) ;
+  sauvegarde de la base dans `~/louann-bande-backup-2026-10-01/` ; `GET /api/turtle/{id}` répond 401 sans jeton
+- Images : les 16 `items/*.png` envoyées dans `/var/www/friend/img/items/` (sans `deploy-friend.sh`, qui vide tout le dossier)
+- Client : version 2.1.0 installée sur la machine de Louann (`Downloads\Pepin.exe`, exe .NET à un fichier, pas NativeAOT).
+  `version.json` reste en 2.0.1 sur le VPS : les amis ne reçoivent pas la 2.1.0 tant qu'un exe NativeAOT n'est pas publié
+  (VS Build Tools + `build.ps1` + `deploy-friend.sh`)
