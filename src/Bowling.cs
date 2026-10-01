@@ -14,7 +14,7 @@ public sealed class Bowling
     public const int PinCount = 6;
     const double PinH = 10;
     const double Near = 8, Far = 62, HalfLane = 26;      // marge côté tireur, profondeur de la piste, demi-largeur
-    const double StartDist = 70;                         // du point de lancer à la quille de tête
+    const double StartDist = 55;                         // du point de lancer à la quille de tête
     const int CW = (int)(Near + Far), CH = 68;           // toile du décor, en pixels logiques
     const double HeadRoom = 39;                          // du sol de la quille de tête au haut de la toile
     const double FallTime = 0.3;
@@ -132,7 +132,7 @@ public sealed class Bowling
     /// <summary>La tortue vient d'être lancée en carapace : ce lancer compte.</summary>
     public void NoteThrow()
     {
-        if (Phase == BowlPhase.Wait) Phase = BowlPhase.Throw;
+        if (Phase == BowlPhase.Wait) { Phase = BowlPhase.Throw; waitT = 0; }
     }
 
     /// <summary>Compte les quilles tombées par ce lancer, balaie celles par terre et dit où en est le tour.</summary>
@@ -188,7 +188,7 @@ public sealed class Bowling
                 break;
             case BowlPhase.Wait:
                 waitT += dt;
-                if ((waitT > 55 && Throws == 0) || life > 300) { Abandoned = true; Stop(); }
+                if (waitT > 45 || life > 300) { Abandoned = true; Stop(); }      // personne ne joue : on range, même en cours de tour
                 break;
         }
 

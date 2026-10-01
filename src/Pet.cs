@@ -43,6 +43,7 @@ public sealed class Pet
     public double NextMouseGameAt;
     public double SnackReadyAt;
     public double NextWindowGameAt = 90, NextPushAt = 1200, NextFollowAt = 300, NextGiftAt = 1800, NextAppReactAt = 30;
+    public double FrictionScale = 1;          // < 1 : elle glisse plus loin (lancer de bowling)
     public double NextGameAt = 1500;          // prochain mini-jeu spontané (rare)
     bool wasRendering;
 
@@ -73,6 +74,7 @@ public sealed class Pet
 
     public void Switch(Behavior b)
     {
+        if (b is not Thrown) FrictionScale = 1;
         if (b is not Thrown and not Fall) { Z = 0; VX = VY = VZ = 0; }   // un saut interrompu ne reste pas suspendu
         OffScreen = false;
         PerchHwnd = 0;
@@ -237,7 +239,7 @@ public sealed class Pet
         VX = vx; VY = vy;
         VZ = sp < 150 ? 0 : 150 + Math.Min(sp * 0.12, 300);
         bool bowling = sp >= 150 && Bowl is { Ready: true };
-        if (bowling) { Z = 3 * Scale; VZ = 0; }       // au bowling elle roule au sol comme une boule (sinon elle vole par-dessus les quilles)
+        if (bowling) { Z = 3 * Scale; VZ = 0; FrictionScale = 0.35; }   // au bowling elle roule au sol comme une boule, sans trop de frottements (sinon elle vole par-dessus les quilles ou s'arrête avant)
         Switch(new Thrown(sp));
         if (bowling) Bowl!.NoteThrow();               // un vrai lancer en carapace compte pour le bowling
     }
@@ -437,7 +439,7 @@ public sealed class Pet
         {
             // frottement au sol
             double sp = Math.Sqrt(VX * VX + VY * VY);
-            double dec = 1400 * dt;
+            double dec = 1400 * FrictionScale * dt;
             if (sp <= dec) VX = VY = 0;
             else { VX -= VX / sp * dec; VY -= VY / sp * dec; }
         }

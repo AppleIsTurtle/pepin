@@ -29,6 +29,13 @@ retombait loin derrière (0 quille sur 15 lancers simulés). Corrigé : au bowli
 de plus de 40 px par image et traversait une quille sans la toucher). `--preview` simule maintenant 15 vrais lancers
 (vitesse × angle) et affiche les quilles tombées : sous ~700 px/s elle s'arrête avant la piste (raté), au-delà ça touche.
 
+## Deuxième correctif (2026-10-01) : « 1 quille tombée, puis impossible, et les quilles restent »
+- Les quilles restaient 5 min après un premier lancer : l'abandon (55 s sans lancer) n'existait qu'avant le 1er lancer.
+  Maintenant 45 s d'inactivité à n'importe quel moment du tour → rangement, et le carnet note la partie interrompue
+- Un lancer « normal » à la souris (400-600 px/s) s'arrêtait avant les quilles (frottement 1400 px/s², quilles à 210 px).
+  Maintenant : frottement ×0,35 pendant un lancer de bowling (`Pet.FrictionScale`) et quilles à 55 px logiques ;
+  dès ~500 px/s ça touche (`--preview` : 18 lancers simulés + une partie complète + un tour abandonné)
+
 ## À vérifier à la première compilation
 1. (fait) Ça compile ; `--preview` montre les quilles qui tombent pour un lancer au centre
 2. Menu Jeux → Bowling : elle va se placer, les quilles tombent, « Lance-moi ! »

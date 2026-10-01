@@ -46,7 +46,11 @@ sealed class BowlWait : Behavior
         if (b is null || !b.Active)
         {
             Done = true;
-            if (b is { Abandoned: true }) p.Say("Bon... une autre fois.", 3);
+            if (b is { Abandoned: true })
+            {
+                p.Say("Bon... une autre fois.", 3);
+                if (b.Throws > 0) p.Note("bowling", $"Partie de bowling interrompue : {b.Fell} quille{(b.Fell > 1 ? "s" : "")} sur {Bowling.PinCount}.");
+            }
             return;
         }
         if (b.Phase is BowlPhase.Prep or BowlPhase.Setup) { p.Breathe(); return; }

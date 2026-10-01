@@ -76,7 +76,7 @@ public static class Preview
 
         // vrais lancers : même chemin que la souris (OnRelease), à plusieurs vitesses et avec un peu d'angle
         Console.WriteLine("lancer (px/s, angle) -> quilles tombées");
-        foreach (double speed in new[] { 500.0, 800, 1200, 1800, 2500 })
+        foreach (double speed in new[] { 350.0, 500, 800, 1200, 1800, 2500 })
             foreach (double dy in new[] { 0.0, 0.08, -0.15 })
             {
                 var gb = new Bowling(new Overlay());
@@ -91,6 +91,34 @@ public static class Preview
                 for (double t = 0; t < 6; t += dt) { gp.Update(dt); gb.Tick(dt, gp, 3, 0); if (gb.Phase == BowlPhase.Over) break; }
                 Console.WriteLine($"  {speed,5:0} {dy,5:0.00} -> {gb.Fell} (phase {gb.Phase}, lancers {gb.Throws})");
             }
+        // une partie entière : deux lancers de suite, comme à la souris, puis (ou pas) le rangement
+        Console.WriteLine("partie complète (2 lancers) :");
+        foreach (double s2 in new[] { 1500.0, 600 })
+        {
+            var gb = new Bowling(new Overlay());
+            var gp = new Pet(mood, new Senses { Work = work, CursorOnSameMonitor = true }, new Idle()) { Scale = 3, X = 600, Y = 700, Bowl = gb };
+            gp.Switch(new BowlSetup());
+            double now = 0;
+            void Run(double secs, Action? each = null)
+            {
+                for (double t = 0; t < secs; t += dt) { now += dt; gp.Update(dt); gb.Tick(dt, gp, 3, 0); each?.Invoke(); }
+            }
+            Run(6);
+            Console.WriteLine($"  [{s2}] prête : phase {gb.Phase}, comportement {gp.Current.GetType().Name}");
+            for (int throwNo = 1; throwNo <= (s2 == 600 ? 1 : 2) && gb.Active; throwNo++)   // à 600 on ne rejoue pas : le tour doit être rangé tout seul
+            {
+                var (gx, gy) = gb.Start;
+                gp.X = gx; gp.Y = gy;                       // l'utilisatrice la ramène au point de lancer
+                gp.OnGrab();
+                gp.OnRelease(gb.Dir * s2, throwNo == 1 ? 60 : -90);
+                Run(10);
+                Console.WriteLine($"  [{s2}] après lancer {throwNo} : tombées {gb.Fell}, phase {gb.Phase}, comportement {gp.Current.GetType().Name}, actif {gb.Active}");
+            }
+            if (gb.Active) { Console.WriteLine($"  [{s2}] tour non fini ({gb.Fell} tombées) : on n'y touche plus"); Run(60); }
+            Run(10);
+            Console.WriteLine($"  [{s2}] plus tard : phase {gb.Phase}, actif {gb.Active}, quilles à l'écran {(gb.Fps > 0 ? "oui" : "non")}");
+        }
+
         Console.WriteLine($"écrit dans {Path.GetFullPath(dir)}");
         return 0;
     }
