@@ -9,7 +9,7 @@
     <AssemblyTitle>PÃ©pin, compagnon de bureau</AssemblyTitle>
     <Description>PÃ©pin, compagnon de bureau</Description>
     <Company>pommetortue.tech</Company>
-    <Version>3.0.1</Version>
+    <Version>3.0.2</Version>
     <AssemblyName>Pepin</AssemblyName>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

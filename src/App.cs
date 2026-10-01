@@ -564,7 +564,7 @@ public sealed unsafe class App
         else anchor = new POINT { X = (int)pet.X, Y = (int)(pet.Y - pet.Z - 34 * home.Scale) };
         var mi = new MONITORINFO { cbSize = (uint)sizeof(MONITORINFO) };
         GetMonitorInfoW(MonitorFromPoint(anchor, MONITOR_DEFAULTTONEAREST), &mi);
-        menu.Open(anchor, mi.rcWork, (int)Math.Max(2, Math.Round(3 * DpiScale)), aboveAnchor: true);
+        menu.Open(anchor, mi.rcWork, (int)Math.Max(2, Math.Round(2 * DpiScale)), aboveAnchor: true);
     }
 
     MenuModel BuildMenuModel()
