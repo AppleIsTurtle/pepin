@@ -51,4 +51,6 @@ STATS = {
     "visits_made": "visites rendues",
     "visits_hosted": "visiteurs reçus",
     "gifts": "cadeaux offerts",
+    "bowling": "parties de bowling",
+    "strikes": "strikes au bowling",
 }

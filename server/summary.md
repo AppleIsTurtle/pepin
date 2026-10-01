@@ -39,5 +39,6 @@ nginx : `/friend/api/` → `/api/`, `/friend/t/` → `/t/`, `/friend/bande` → 
 Images `/friend/img/` (dont `items/<souvenir>.png`) servies par nginx. Sauvegarde : `sqlite3 data/bande.db ".backup …"`.
 
 ## Historique
+- 2026-10-01 : stats `bowling` / `strikes`, limite des stats du carnet portée à 40 (feature jeux).
 - 2026-09-30 : création (feature bande, chunk 01).
 - 2026-10-01 : `GET /api/public/band` pour afficher la bande et les liens vers les carnets sur /friend/.

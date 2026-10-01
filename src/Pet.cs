@@ -19,6 +19,7 @@ public sealed class Pet
     public AppWatch? Apps;
     public Life? Life;
     public Band? Band;
+    public Bowling? Bowl;                     // mini-jeu de bowling (tortue de la maison seulement)
     public bool IsGuest;                      // tortue d'un ami en visite chez nous
     public Pet? Partner;                      // l'autre tortue pendant une visite
     public bool CursorOnMe;                   // le curseur est sur un pixel de la tortue (renseigné par Creature)
@@ -41,6 +42,7 @@ public sealed class Pet
     public double NextMouseGameAt;
     public double SnackReadyAt;
     public double NextWindowGameAt = 90, NextPushAt = 1200, NextFollowAt = 300, NextGiftAt = 1800, NextAppReactAt = 30;
+    public double NextGameAt = 1500;          // prochain mini-jeu spontané (rare)
     bool wasRendering;
 
     // stimuli
@@ -234,6 +236,7 @@ public sealed class Pet
         VX = vx; VY = vy;
         VZ = sp < 150 ? 0 : 150 + Math.Min(sp * 0.12, 300);
         Switch(new Thrown(sp));
+        if (sp >= 150) Bowl?.NoteThrow();     // un vrai lancer en carapace compte pour le bowling
     }
 
     // ------------------------------------------------------------------ cerveau
@@ -269,6 +272,7 @@ public sealed class Pet
     {
         if (Orchestrator?.Invoke() is Behavior imposed) return imposed;
         if (IsGuest) return GuestPick();
+        if (Bowl is { Active: true }) return new BowlWait();     // une partie est en cours : on y reste
 
         double e = M.Energy, h = M.Hunger, hap = M.Happiness, aff = M.Affection;
         bool night = DateTime.Now.Hour is < 7 or >= 23;
@@ -324,6 +328,11 @@ public sealed class Pet
         if (tier >= 2 && S.IdleSeconds > 90 && e < 0.8 && S.CursorOnSameMonitor) Add(2, () => new NapByCursor());
         if (tier >= 2 && Time >= NextGiftAt && S.IdleSeconds < 30 && S.CursorOnSameMonitor) Add(0.3, () => new BringGift(), 4);
 
+        // mini-jeux : rares, et seulement si tu es là, qu'elle est en forme et que rien d'autre ne l'occupe
+        if (Bowl is not null && Life?.D.MiniGames == true && Time >= NextGameAt && e > 0.5 && hap > 0.4 &&
+            S.IdleSeconds < 20 && S.CursorOnSameMonitor && Apps?.Rendering != true && Apps?.Foreground != AppActivity.Video)
+            Add(0.25, () => new BowlSetup(), 7);
+
         // partir en visite chez un ami de la bande
         if (Band?.CanGoSpontaneously(this) == true) Add(0.3, () => new LeaveForVisit(to: null, message: null));
 
@@ -344,6 +353,7 @@ public sealed class Pet
             case 4: NextGiftAt = Time + R.Next(2700, 5400); break;
             case 5: NextFollowAt = Time + R.Next(300, 900); break;
             case 6: NextAppReactAt = Time + R.Next(120, 300); break;
+            case 7: NextGameAt = Time + R.Next(5400, 10800); break;
         }
         return chosen.make();
     }

@@ -543,7 +543,7 @@ sealed class AttackCursor : Behavior
 sealed class ChaseCursor : Behavior
 {
     double dur, fastTime;
-    public override int Fps => 24;
+    public override int Fps => 30;
     public override bool Interruptible => false;
     public override string Label => "poursuit ta souris";
     public override void OnStartle(Pet p) { }
@@ -553,7 +553,9 @@ sealed class ChaseCursor : Behavior
         var v = p.V;
         if (!p.S.CursorOnSameMonitor) { Done = true; return; }
         v.Eyes = Eyes.Determined; v.Mouth = Mouth.Grin;
-        p.WalkTo(p.S.CX, p.S.CY + 14 * p.Scale, 20, dt);
+        // elle accélère quand la souris s'éloigne (45 à 70 px logiques/s) : avant, 20 ne rattrapait jamais rien
+        double speed = 45 + Math.Min(25, p.DistToCursor() / p.Scale / 6);
+        p.WalkTo(p.S.CX, p.S.CY + 14 * p.Scale, speed, dt);
         if (p.DistToCursor() < 14 * p.Scale)
         {
             p.M.Happiness += 0.08;
@@ -689,7 +691,8 @@ sealed class Thrown : Behavior
         {
             p.Z = 0; p.VX = p.VY = p.VZ = 0;
             Done = true;
-            if (gentle) p.Next = new Surprised(annoyed: false);
+            if (p.Bowl is { Throwing: true }) p.Next = new BowlReact();      // un lancer de bowling : ni vol plané ni rancune
+            else if (gentle) p.Next = new Surprised(annoyed: false);
             else if (strength > 900 || bonks >= 2)
             {
                 p.M.Happiness -= 0.1; p.M.Affection -= 0.03;

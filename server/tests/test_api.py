@@ -486,7 +486,7 @@ def test_carnet(client, horloge):
 
 @pytest.mark.parametrize("modif", [
     {"journal": [{"t": 1, "text": "x"}] * 61},
-    {"stats": {f"k{i}": 1 for i in range(21)}},
+    {"stats": {f"k{i}": 1 for i in range(41)}},
     {"stats": {"k" * 25: 1}},
     {"stats": {"<script>": 1}},
     {"stats": {"snacks": -1}},

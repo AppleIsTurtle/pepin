@@ -9,3 +9,4 @@ schéma : `plan.md` (point de départ, objectif, décisions, liste des chunks) +
 | `fenetres/` | perception des fenêtres et des applis, comportements associés | done |
 | `evolution/` | lien par paliers, comportements débloqués, carnet de vie | done |
 | `bande/` | serveur de la bande, visites entre tortues, déploiement v2 | done |
+| `jeux/` | mini-jeux (bowling), évènements aléatoires, collection des autres tortues | en cours (chunk 01 écrit, non compilé) |

@@ -297,7 +297,7 @@ class EntreeJournal(BaseModel):
 class Carnet(BaseModel):
     tier: int = Field(ge=0, le=4)
     bond: float = Field(allow_inf_nan=False)
-    stats: dict[CleStat, Compteur] = Field(default_factory=dict, max_length=20)
+    stats: dict[CleStat, Compteur] = Field(default_factory=dict, max_length=40)
     collection: dict[str, Compteur] = Field(default_factory=dict, max_length=100)
     journal: list[EntreeJournal] = Field(default_factory=list, max_length=60)
 

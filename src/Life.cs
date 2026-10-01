@@ -53,6 +53,7 @@ public sealed class LifeData
     public string? Name { get; set; }
     public bool AcceptMessages { get; set; } = true;
     public bool SpontaneousVisits { get; set; } = true;
+    public bool MiniGames { get; set; } = true;            // mini-jeux spontanés (bowling…)
     public long LastVisitUnix { get; set; }
 }
 

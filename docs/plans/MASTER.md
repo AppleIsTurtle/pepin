@@ -46,6 +46,7 @@ notification (état, réveiller/endormir, appeler, taille, pause, démarrage aut
 | Fenêtres et applis | [features/fenetres/plan.md](features/fenetres/plan.md) | done |
 | Personnalité qui évolue | [features/evolution/plan.md](features/evolution/plan.md) | done |
 | La bande | [features/bande/plan.md](features/bande/plan.md) | done |
+| Mini-jeux, évènements, réseau enrichi | [features/jeux/plan.md](features/jeux/plan.md) | en cours |
 
 ## Chunks
 | # | Fichier | Statut |

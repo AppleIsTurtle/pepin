@@ -33,6 +33,8 @@ public sealed unsafe class App
     readonly AppWatch apps = new();
     readonly Creature home;
     readonly Label say = new(), note = new();
+    readonly Overlay lane = new();
+    readonly Bowling bowling;
     HostVisit? visit;
     (int x, int y) leftFrom;           // d'où ma tortue est partie en visite (pour le petit mot)
 
@@ -52,8 +54,9 @@ public sealed unsafe class App
         life = new Life(mood.LifeData);
         life.CatchUp(mood.HoursAway);
         band = new Band(mood.LifeData) { OnEvent = OnBandEvent, OnChanged = Save };
+        bowling = new Bowling(lane);
         var senses = new Senses();
-        var pet = new Pet(mood, senses, updated ? new NewShell() : null) { Win = win, Apps = apps, Life = life, Band = band };
+        var pet = new Pet(mood, senses, updated ? new NewShell() : null) { Win = win, Apps = apps, Life = life, Band = band, Bowl = bowling };
         home = new Creature(pet, senses);
     }
 
@@ -80,6 +83,7 @@ public sealed unsafe class App
         if (home.Hwnd == 0) return 1;
         say.Create(inst);
         note.Create(inst);
+        lane.Create(inst);
         taskbarCreated = RegisterWindowMessageW("TaskbarCreated");
         SetupAutostart();
         AddTray();
@@ -199,6 +203,9 @@ public sealed unsafe class App
         home.Tick(now, dt, dpi, sizeLevel);
         home.SetHidden(paused || pet.Current is AwayOnVisit);
 
+        if (bowling.Active && (paused || visit is not null || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) bowling.Stop();
+        bowling.Tick(dt, pet, home.Scale, home.Hwnd);
+
         if (visit is not null)
         {
             uint gdpi = Math.Max(96u, GetDpiForWindow(visit.Guest.Hwnd));
@@ -211,6 +218,7 @@ public sealed unsafe class App
 
         int fps = pet.Fps;
         if (visit is not null) fps = Math.Max(fps, visit.Guest.Pet.Fps);
+        fps = Math.Max(fps, bowling.Fps);
         if (pet.Dragging) fps = 60;
         SetFps(fps);
 
@@ -221,6 +229,7 @@ public sealed unsafe class App
             // certaines applis passent devant : on réaffirme « toujours au premier plan »
             SetWindowPos(home.Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
             if (visit is not null) SetWindowPos(visit.Guest.Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            lane.PlaceBelow(home.Hwnd);                          // le décor reste juste sous la tortue
             lastTopmost = now;
         }
         CheckUpdate(now);
@@ -264,6 +273,7 @@ public sealed unsafe class App
                             pet.Current is AwayOnVisit or LeaveScreen or LeaveForVisit;
                 if (busy) { band.Abort(v.Id); break; }
                 visit = new HostVisit(v, home, band, life, inst);
+                bowling.Stop();                                  // une visite passe avant le jeu
                 break;
 
             case "return":
@@ -387,6 +397,7 @@ public sealed unsafe class App
 
     // ------------------------------------------------------------------ menu
 
+    const int IdBowling = 60, IdMiniGames = 61;
     const int IdSendRandom = 40, IdSendNote = 41, IdBandPage = 42, IdSpontaneous = 43, IdMessages = 44, IdRename = 45,
               IdBlockGuest = 46, IdCarnetPage = 50, IdSendTo = 1000;
 
@@ -440,6 +451,14 @@ public sealed unsafe class App
         if (visit is not null) AppendMenuW(bande, MF_STRING, IdBlockGuest, $"Bloquer {visit.Info.From?.Name}");
         AppendMenuW(bande, MF_STRING, IdBandPage, "Voir la bande en ligne");
         AppendMenuW(menu, MF_POPUP, (nuint)bande, "La bande");
+
+        // jeux
+        nint games = CreatePopupMenu();
+        bool canPlay = !bowling.Active && !paused && visit is null && band.Outgoing is null && pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
+        AppendMenuW(games, canPlay ? MF_STRING : MF_GRAYED, IdBowling, "Bowling (lance-le !)");
+        AppendMenuW(games, MF_SEPARATOR, 0, null);
+        AppendMenuW(games, life.D.MiniGames ? MF_CHECKED : 0, IdMiniGames, "Propose des jeux de temps en temps");
+        AppendMenuW(menu, MF_POPUP, (nuint)games, "Jeux");
         AppendMenuW(menu, MF_SEPARATOR, 0, null);
 
         AppendMenuW(menu, MF_STRING, 10, pet.Current.Asleep ? "Le réveiller" : "Le mettre au lit");
@@ -482,6 +501,13 @@ public sealed unsafe class App
                 break;
             case IdSendRandom:
                 SendOnVisit(null, null);
+                break;
+            case IdBowling:
+                if (canPlay && !pet.Dragging) pet.Switch(new BowlSetup());
+                break;
+            case IdMiniGames:
+                life.D.MiniGames = !life.D.MiniGames;
+                Save();
                 break;
             case IdSendNote:
             {
@@ -561,6 +587,7 @@ public sealed unsafe class App
             home.SetHidden(true);
             say.Hide();
             note.Hide();
+            bowling.Hide();
             // un visiteur ne reste pas si on cache tout
             if (visit is not null) { band.Abort(visit.Info.Id); visit.Cleanup(); visit = null; }
             // la pause arrête le timer : on rafraîchit l'état « away » tout de suite
