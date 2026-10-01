@@ -30,9 +30,13 @@ Plans : chunks 01-06 dans `docs/plans/`, v2 dans `docs/plans/features/` (mise-a-
 | `Behaviors.Windows.cs` | `Perch`, `Fall`, `HideBehind`, `PushWindow`, `WatchVideo`, `RenderWorry`, `KeyboardDoze` | Pet, WindowWorld, AppWatch | fenetres/02-03 |
 | `Behaviors.Life.cs` | `LevelUp`, `FollowYou`, `NapByCursor`, `BringGift`, `SadGoodbye`, `JoyDance` | Pet, Life | evolution |
 | `Behaviors.Social.cs` | `LeaveForVisit`, `LeaveScreen`, `AwayOnVisit`, `Arrive`, `ComeBack`, `NewShell`, activités à deux (`Sniff`, `TagGame`, `ShareSnack`, `NapTogether`, `DanceTogether`), `WatchFriend`, `Goodbye` | Pet, Band | bande/02 |
-| `Overlay.cs` | fenêtre layered traversable pour un décor en gros pixels (quilles…), rangée sous la tortue | Native, PixelCanvas | jeux/01 |
+| `Overlay.cs` | fenêtre layered en gros pixels (décor traversable ou cliquable : quilles, herbe, cartes), rangée sous la tortue | Native, PixelCanvas | jeux/01 |
 | `Bowling.cs` | mini-jeu de bowling : piste, 6 quilles, physique, phases, abandon | Overlay, Pet, Glyphs | jeux/01 |
-| `Behaviors.Games.cs` | `BowlSetup`, `BowlWait`, `BowlReact` | Pet, Bowling | jeux/01 |
+| `Behaviors.Games.cs` | `BowlSetup`, `BowlWait`, `BowlReact`, `NoticeTuft`, `WatchCritter` | Pet, Bowling, Grass | jeux/01-02 |
+| `Grass.cs` | évènement « touffe d'herbe » : pousse, clic = rien / objet / petite bête | Overlay, Glyphs, Life | jeux/02 |
+| `DeckView.cs` | carte de collection (la nôtre ou celle d'une autre tortue), 16 cases | Overlay, PixelFont, Glyphs | jeux/03 |
+| `PixelFont.cs` | police pixel-art en capitales accentuées pour les cartes | PixelCanvas | jeux/03 |
+| `Preview.cs` | outil de dev `--preview` : PNG de la carte, de l'herbe et d'un lancer de bowling simulé | DeckView, Grass, Bowling | jeux |
 | `Visit.cs` | `HostVisit` : orchestration d'une visite reçue (arrivée, programme d'activités, au revoir, souvenir, fin) | Creature, Band, Label | bande/02 |
 | `Band.cs` | client de la bande : thread réseau, inscription, heartbeat + évènements acquittés, visites, renommer, bloquer, carnet ; DTO JSON (source generator) | Updater (Net) | bande/02 |
 | `Updater.cs` | `Net` (HttpClient partagé), mise à jour auto : `version.json`, SHA-256, remplacement de l'exe, relance | — | mise-a-jour |

@@ -14,7 +14,7 @@ from html import escape as e
 from fastapi.responses import HTMLResponse
 
 import db
-from catalogue import ACTIVITES, PALIERS, SOUVENIRS, STATS
+from catalogue import ACTIVITES, COLLECTION, PALIERS, SOUVENIRS, STATS
 
 EN_LIGNE = 150
 TRENTE_JOURS = 30 * 86400
@@ -262,11 +262,11 @@ def carnet(tid: str, t: int) -> HTMLResponse:
 
     # Collection de souvenirs.
     collection = donnees.get("collection") or {}
-    objets = [(k, int(collection[k])) for k in SOUVENIRS if int(collection.get(k, 0)) > 0]
+    objets = [(k, int(collection[k])) for k in COLLECTION if int(collection.get(k, 0)) > 0]
     if objets:
         figures = "".join(
-            f'<figure><img class="px" src="/friend/img/items/{k}.png" alt="{e(SOUVENIRS[k])}" width="64" height="64">'
-            f'<figcaption><b>× {_nombre(n)}</b>{e(SOUVENIRS[k])}</figcaption></figure>'
+            f'<figure><img class="px" src="/friend/img/items/{k}.png" alt="{e(COLLECTION[k])}" width="64" height="64">'
+            f'<figcaption><b>× {_nombre(n)}</b>{e(COLLECTION[k])}</figcaption></figure>'
             for k, n in objets
         )
         blocs.append(_section("Collection", f'<div class="items">{figures}</div>'))

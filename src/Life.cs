@@ -1,15 +1,25 @@
 namespace Pepin;
 
-/// <summary>Objets que la tortue peut tenir, offrir, rapporter de visite (ids partagés avec le serveur).</summary>
-public enum Item : byte { Fraise, FraiseDoree, Salade, Coquillage, Caillou, Fleur, Plume, Trefle, Gland, Bouton }
+/// <summary>
+/// Objets que la tortue peut tenir, offrir, rapporter de visite (ids partagés avec le serveur).
+/// Les 10 premiers sont des cadeaux/souvenirs ; les suivants ne se trouvent que dans l'herbe (objets, puis animaux).
+/// </summary>
+public enum Item : byte
+{
+    Fraise, FraiseDoree, Salade, Coquillage, Caillou, Fleur, Plume, Trefle, Gland, Bouton,
+    Champignon, Pissenlit,
+    Coccinelle, Escargot, Grenouille, Papillon,
+}
 
 public static class Items
 {
     public static readonly string[] Ids =
-        ["fraise", "fraise-doree", "salade", "coquillage", "caillou", "fleur", "plume", "trefle", "gland", "bouton"];
+        ["fraise", "fraise-doree", "salade", "coquillage", "caillou", "fleur", "plume", "trefle", "gland", "bouton",
+         "champignon", "pissenlit", "coccinelle", "escargot", "grenouille", "papillon"];
     public static readonly string[] Labels =
         ["une fraise", "une fraise dorée", "une feuille de salade", "un coquillage", "un joli caillou",
-         "une fleur", "une plume", "un trèfle", "un gland", "un bouton"];
+         "une fleur", "une plume", "un trèfle", "un gland", "un bouton",
+         "un champignon", "un pissenlit", "une coccinelle", "un escargot", "une grenouille", "un papillon"];
 
     public static string Id(Item i) => Ids[(int)i];
     public static string Label(Item i) => Labels[(int)i];
@@ -18,14 +28,26 @@ public static class Items
         int k = id is null ? -1 : Array.IndexOf(Ids, id);
         return k < 0 ? null : (Item)k;
     }
-    /// <summary>Tirage d'un cadeau : les objets rares (fraise dorée) le sont vraiment.</summary>
+    public static bool IsAnimal(Item i) => i >= Item.Coccinelle;
+
+    /// <summary>Tirage d'un cadeau (parmi les 10 premiers) : les objets rares (fraise dorée) le sont vraiment.</summary>
     public static Item Random(Random r)
     {
         if (r.NextDouble() < 0.05) return Item.FraiseDoree;
         Item i;
-        do i = (Item)r.Next(0, Ids.Length); while (i == Item.FraiseDoree);
+        do i = (Item)r.Next(0, (int)Item.Bouton + 1); while (i == Item.FraiseDoree);
         return i;
     }
+
+    static readonly Item[] HerbObjects =
+        [Item.Trefle, Item.Fleur, Item.Champignon, Item.Pissenlit, Item.Fraise, Item.Salade, Item.Gland, Item.Plume, Item.Bouton, Item.Caillou];
+    static readonly Item[] Critters = [Item.Coccinelle, Item.Escargot, Item.Grenouille, Item.Papillon];
+
+    /// <summary>Ce qu'on trouve dans l'herbe : un objet (la fraise dorée est très rare).</summary>
+    public static Item HerbObject(Random r) =>
+        r.NextDouble() < 0.03 ? Item.FraiseDoree : HerbObjects[r.Next(HerbObjects.Length)];
+
+    public static Item Critter(Random r) => Critters[r.Next(Critters.Length)];
 }
 
 public sealed class JournalEntry

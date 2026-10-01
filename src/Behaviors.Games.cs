@@ -149,3 +149,62 @@ sealed class BowlReact : Behavior
         b.Stop();
     }
 }
+
+// ======================================================================== évènements : l'herbe
+
+/// <summary>Une touffe d'herbe vient de pousser : elle l'a vue, va voir de plus près et attend (un peu) que tu t'y intéresses.</summary>
+sealed class NoticeTuft : Behavior
+{
+    public override int Fps => 15;
+    public override string Label => "a vu de l'herbe";
+
+    public override void Tick(Pet p, double dt)
+    {
+        var g = p.Grass;
+        var v = p.V;
+        if (g is null || g.Phase is GrassPhase.Off or GrassPhase.Leave || T > 45) { Done = true; return; }
+        if (g.Phase == GrassPhase.Result) { Done = true; return; }       // l'App prend la suite (réaction au résultat)
+        var (gx, gy) = g.Spot;
+        if (T < 1.1)
+        {
+            p.FaceX(gx);
+            v.Eyes = Eyes.Wide; v.Mouth = Mouth.Oh;
+            v.Add(FxKind.Exclaim, (float)T);
+            return;
+        }
+        double side = p.X < gx ? -1 : 1;
+        double tx = gx + side * 16 * p.Scale;
+        if (Math.Abs(p.X - tx) > 3 * p.Scale || Math.Abs(p.Y - gy) > 4 * p.Scale)
+        {
+            p.WalkTo(tx, gy, 10, dt);
+            return;
+        }
+        p.FaceX(gx);
+        p.Breathe();
+        v.Eyes = Every(T, 6, 0.7) ? Eyes.Normal : Eyes.Wide;
+        if (Every(T, 12, 0.15)) v.Add(FxKind.Question);
+    }
+}
+
+/// <summary>Une petite bête est sortie de l'herbe : elle la regarde passer, intriguée.</summary>
+sealed class WatchCritter : Behavior
+{
+    public override int Fps => 15;
+    public override string Label => "observe une petite bête";
+
+    public override void Tick(Pet p, double dt)
+    {
+        var g = p.Grass;
+        var v = p.V;
+        if (g is null || !g.CritterActive) { Done = true; return; }
+        var (cx, cy) = g.CritterPos;
+        p.FaceX(cx);
+        p.Breathe();
+        bool close = Math.Abs(cx - p.X) < 24 * p.Scale;
+        v.Eyes = Eyes.Wide;
+        v.Mouth = close ? Mouth.Oh : Mouth.Smile;
+        v.LookY = cy < p.Y - 20 * p.Scale ? -1 : 0;
+        if (T < 1.2) v.Add(FxKind.Exclaim, (float)T);
+        else if (Every(T, 5, 0.25)) v.Add(FxKind.Hearts, (float)(T % 5), 1);
+    }
+}

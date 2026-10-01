@@ -35,6 +35,9 @@ public sealed unsafe class App
     readonly Label say = new(), note = new();
     readonly Overlay lane = new();
     readonly Bowling bowling;
+    readonly GrassEvent grass = new();
+    readonly DeckView deck = new();
+    double nextGrassAt = Now + 600;      // première touffe 10 min après le lancement, puis toutes les 40 à 90 min
     HostVisit? visit;
     (int x, int y) leftFrom;           // d'où ma tortue est partie en visite (pour le petit mot)
 
@@ -56,7 +59,7 @@ public sealed unsafe class App
         band = new Band(mood.LifeData) { OnEvent = OnBandEvent, OnChanged = Save };
         bowling = new Bowling(lane);
         var senses = new Senses();
-        var pet = new Pet(mood, senses, updated ? new NewShell() : null) { Win = win, Apps = apps, Life = life, Band = band, Bowl = bowling };
+        var pet = new Pet(mood, senses, updated ? new NewShell() : null) { Win = win, Apps = apps, Life = life, Band = band, Bowl = bowling, Grass = grass };
         home = new Creature(pet, senses);
     }
 
@@ -84,6 +87,9 @@ public sealed unsafe class App
         say.Create(inst);
         note.Create(inst);
         lane.Create(inst);
+        grass.Create(inst);
+        grass.Resolved = OnGrass;
+        deck.Create(inst);
         taskbarCreated = RegisterWindowMessageW("TaskbarCreated");
         SetupAutostart();
         AddTray();
@@ -146,6 +152,7 @@ public sealed unsafe class App
                     if (c.Pet.Dragging) SetFps(60);
                     return 0;
                 }
+                if (Overlay.From(h) is Overlay ov && ov.HandleMouse(m)) return 0;
                 break;
             case WM_RBUTTONUP:
                 ShowMenu();
@@ -206,6 +213,11 @@ public sealed unsafe class App
         if (bowling.Active && (paused || visit is not null || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) bowling.Stop();
         bowling.Tick(dt, pet, home.Scale, home.Hwnd);
 
+        if (grass.Active && (paused || visit is not null || bowling.Active || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) grass.Stop();
+        MaybeSpawnGrass(now);
+        grass.Tick(dt, home.Scale, home.Hwnd);
+        deck.Tick(now);
+
         if (visit is not null)
         {
             uint gdpi = Math.Max(96u, GetDpiForWindow(visit.Guest.Hwnd));
@@ -218,7 +230,7 @@ public sealed unsafe class App
 
         int fps = pet.Fps;
         if (visit is not null) fps = Math.Max(fps, visit.Guest.Pet.Fps);
-        fps = Math.Max(fps, bowling.Fps);
+        fps = Math.Max(fps, Math.Max(bowling.Fps, grass.Fps));
         if (pet.Dragging) fps = 60;
         SetFps(fps);
 
@@ -274,6 +286,7 @@ public sealed unsafe class App
                 if (busy) { band.Abort(v.Id); break; }
                 visit = new HostVisit(v, home, band, life, inst);
                 bowling.Stop();                                  // une visite passe avant le jeu
+                grass.Stop();
                 break;
 
             case "return":
@@ -328,6 +341,71 @@ public sealed unsafe class App
             c.Journal.Add(new CarnetEntry { T = j.T, Text = j.Text });
         band.PushCarnet(c);
         life.Dirty = false;
+    }
+
+    // ------------------------------------------------------------------ évènements et collection
+
+    void ShowDeck(string title, string subtitle, IReadOnlyDictionary<string, int> collection, IReadOnlyDictionary<string, int>? mine)
+    {
+        home.Senses.Update(Now, 0, home.Pet.X, home.Pet.Y);
+        deck.Show(title, subtitle, collection, mine, home.Senses.Work, (int)Math.Max(2, Math.Round(3 * DpiScale)));
+    }
+
+    /// <summary>Une touffe d'herbe de temps en temps, quand tout est calme et que tu es là.</summary>
+    void MaybeSpawnGrass(double now)
+    {
+        if (now < nextGrassAt) return;
+        var pet = home.Pet;
+        bool calm = life.D.MiniGames && !paused && visit is null && band.Outgoing is null && !bowling.Active && !grass.Active &&
+                    !pet.Dragging && pet.Current.Interruptible && !pet.Current.Asleep &&
+                    pet.Current is not (AwayOnVisit or LeaveForVisit or LeaveScreen or ComeBack) &&
+                    home.Senses.IdleSeconds < 30 && home.Senses.CursorOnSameMonitor &&
+                    !apps.Rendering && apps.Foreground != AppActivity.Video;
+        if (!calm) { nextGrassAt = now + 60; return; }       // pas maintenant : on réessaie dans une minute
+        nextGrassAt = now + Random.Shared.Next(2400, 5400);
+        SpawnGrass();
+    }
+
+    void SpawnGrass()
+    {
+        var pet = home.Pet;
+        home.Senses.Update(Now, 0, pet.X, pet.Y);
+        if (grass.TrySpawn(pet) && pet.Current.Interruptible && !pet.Current.Asleep && !pet.Dragging) pet.Switch(new NoticeTuft());
+    }
+
+    /// <summary>Résultat d'un clic sur la touffe : la collection, le carnet, la réaction de la tortue.</summary>
+    void OnGrass(GrassOutcome outcome, Item? found)
+    {
+        var pet = home.Pet;
+        bool free = pet.Current.Interruptible && !pet.Dragging && pet.Current is not (AwayOnVisit or LeaveForVisit or LeaveScreen);
+        switch (outcome)
+        {
+            case GrassOutcome.Nothing:
+                pet.Say("Rien, que de l'herbe...", 3);
+                break;
+            case GrassOutcome.Object when found is Item it:
+                life.AddItem(it);
+                life.Count("finds");
+                life.AddBond(0.5);
+                life.Write($"A trouvé {Items.Label(it)} dans l'herbe.");
+                pet.M.Happiness += 0.03;
+                pet.Say($"Trouvé : {Items.Label(it)} !", 3.5);
+                if (free) pet.Switch(new Hooray());
+                Save();
+                break;
+            case GrassOutcome.Critter when found is Item an:
+            {
+                string label = Items.Label(an);
+                life.AddItem(an);
+                life.Count("critters");
+                life.AddBond(1);
+                life.Write($"{char.ToUpperInvariant(label[0])}{label[1..]} a surgi de l'herbe.");
+                pet.Say($"Oh, {label} !", 3.5);
+                if (free) pet.Switch(new WatchCritter());
+                Save();
+                break;
+            }
+        }
     }
 
     // ------------------------------------------------------------------ mise à jour automatique
@@ -397,7 +475,7 @@ public sealed unsafe class App
 
     // ------------------------------------------------------------------ menu
 
-    const int IdBowling = 60, IdMiniGames = 61;
+    const int IdBowling = 60, IdMiniGames = 61, IdDeckMine = 62, IdGrass = 63, IdDeckOf = 2000;
     const int IdSendRandom = 40, IdSendNote = 41, IdBandPage = 42, IdSpontaneous = 43, IdMessages = 44, IdRename = 45,
               IdBlockGuest = 46, IdCarnetPage = 50, IdSendTo = 1000;
 
@@ -422,11 +500,9 @@ public sealed unsafe class App
             string text = j.Text.Length > 70 ? j.Text[..69] + "…" : j.Text;
             AppendMenuW(carnet, MF_STRING | MF_GRAYED, 5, $"{stamp}   {text.Replace("&", "&&")}");
         }
-        if (band.Registered)
-        {
-            AppendMenuW(carnet, MF_SEPARATOR, 0, null);
-            AppendMenuW(carnet, MF_STRING, IdCarnetPage, "Ouvrir son carnet en ligne");
-        }
+        AppendMenuW(carnet, MF_SEPARATOR, 0, null);
+        AppendMenuW(carnet, MF_STRING, IdDeckMine, "Ma collection");
+        if (band.Registered) AppendMenuW(carnet, MF_STRING, IdCarnetPage, "Ouvrir son carnet en ligne");
         AppendMenuW(menu, MF_POPUP, (nuint)carnet, "Carnet");
 
         // la bande
@@ -444,6 +520,12 @@ public sealed unsafe class App
         if (available.Count == 0) AppendMenuW(sendTo, MF_STRING | MF_GRAYED, 9, "personne de dispo pour l'instant");
         AppendMenuW(bande, MF_POPUP, (nuint)sendTo, "Envoyer chez…");
         AppendMenuW(bande, canSend ? MF_STRING : MF_GRAYED, IdSendNote, "Envoyer avec un petit mot…");
+        nint decks = CreatePopupMenu();
+        var others = band.Turtles.Take(25).ToList();
+        for (int i = 0; i < others.Count; i++)
+            AppendMenuW(decks, MF_STRING, (nuint)(IdDeckOf + i), others[i].Name.Replace("&", "&&") + (others[i].Online ? "" : "  (hors ligne)"));
+        if (others.Count == 0) AppendMenuW(decks, MF_STRING | MF_GRAYED, 12, "personne pour l'instant");
+        AppendMenuW(bande, MF_POPUP, (nuint)decks, "Voir la collection de…");
         AppendMenuW(bande, MF_SEPARATOR, 0, null);
         AppendMenuW(bande, life.D.SpontaneousVisits ? MF_CHECKED : 0, IdSpontaneous, "Visites spontanées");
         AppendMenuW(bande, life.D.AcceptMessages ? MF_CHECKED : 0, IdMessages, "Accepter les petits mots");
@@ -456,6 +538,7 @@ public sealed unsafe class App
         nint games = CreatePopupMenu();
         bool canPlay = !bowling.Active && !paused && visit is null && band.Outgoing is null && pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
         AppendMenuW(games, canPlay ? MF_STRING : MF_GRAYED, IdBowling, "Bowling (lance-le !)");
+        AppendMenuW(games, canPlay && !grass.Active ? MF_STRING : MF_GRAYED, IdGrass, "Faire pousser une touffe d'herbe");
         AppendMenuW(games, MF_SEPARATOR, 0, null);
         AppendMenuW(games, life.D.MiniGames ? MF_CHECKED : 0, IdMiniGames, "Propose des jeux de temps en temps");
         AppendMenuW(menu, MF_POPUP, (nuint)games, "Jeux");
@@ -505,6 +588,24 @@ public sealed unsafe class App
             case IdBowling:
                 if (canPlay && !pet.Dragging) pet.Switch(new BowlSetup());
                 break;
+            case IdGrass:
+                if (canPlay) SpawnGrass();
+                break;
+            case IdDeckMine:
+                ShowDeck($"Collection de {PetName}", life.Summary(), life.D.Collection, null);
+                break;
+            case >= IdDeckOf when cmd - IdDeckOf < others.Count:
+            {
+                var other = others[cmd - IdDeckOf];
+                band.FetchTurtle(other.Id, (d, err) =>
+                {
+                    if (d is null) { pet.Say(Band.ErrorText(err), 3); return; }
+                    string tier = Life.TierNames[Math.Clamp(d.Tier, 0, 4)];
+                    string sub = d.Friendship > 0 ? $"{tier} - amitié {d.Friendship}" : tier;
+                    ShowDeck($"Collection de {d.Name}", sub, d.Collection, life.D.Collection);
+                });
+                break;
+            }
             case IdMiniGames:
                 life.D.MiniGames = !life.D.MiniGames;
                 Save();
@@ -588,6 +689,8 @@ public sealed unsafe class App
             say.Hide();
             note.Hide();
             bowling.Hide();
+            grass.Stop();
+            deck.Hide();
             // un visiteur ne reste pas si on cache tout
             if (visit is not null) { band.Abort(visit.Info.Id); visit.Cleanup(); visit = null; }
             // la pause arrête le timer : on rafraîchit l'état « away » tout de suite

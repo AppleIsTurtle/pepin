@@ -33,6 +33,6 @@ si tu l'ignores, ne passe jamais devant un rendu, une vidéo, une visite ou la p
 ## Chunks
 | # | Fichier | Statut |
 |---|---|---|
-| 01 | [chunk-01-bowling.md](chunk-01-bowling.md) | code écrit, à compiler et tester |
-| 02 | chunk-02-evenements.md | à faire |
-| 03 | chunk-03-deck-reseau.md | à faire |
+| 01 | [chunk-01-bowling.md](chunk-01-bowling.md) | compile, rendu vérifié en PNG, à tester en vrai |
+| 02 | [chunk-02-evenements.md](chunk-02-evenements.md) | compile, rendu vérifié en PNG, à tester en vrai |
+| 03 | [chunk-03-deck-reseau.md](chunk-03-deck-reseau.md) | compile, rendu vérifié en PNG, serveur testé ; à tester en vrai |

@@ -10,6 +10,7 @@ static class Program
         if (a0 == "--sheet") { SheetRenderer.Render(args.Length >= 2 ? args[1] : "sheet.png"); return 0; }
         if (a0 == "--frames") { SheetRenderer.Frames(args.Length >= 2 ? args[1] : "frames"); return 0; }
         if (a0 == "--windows") return WinDebug.Run();
+        if (a0 == "--preview") return Preview.Run(args.Length >= 2 ? args[1] : "preview");
         if (a0 == "--bandtest") return Simulator.BandTest(args.Length >= 2 ? args[1] : null);
         if (a0 == "--simulate")
             return Simulator.Run(args.Length >= 2 ? double.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture) : 3);

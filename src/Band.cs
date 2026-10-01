@@ -59,6 +59,16 @@ public sealed class CarnetReq
     public List<CarnetEntry> Journal { get; set; } = [];
 }
 public sealed class ErrorResp { public string? Error { get; set; } }
+public sealed class TurtleDeck
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    public int Tier { get; set; }
+    public bool Online { get; set; }
+    public int Friendship { get; set; }
+    public Dictionary<string, int> Collection { get; set; } = [];
+    public Dictionary<string, int> Stats { get; set; } = [];
+}
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(RegisterReq))]
@@ -73,6 +83,7 @@ public sealed class ErrorResp { public string? Error { get; set; } }
 [JsonSerializable(typeof(IdReq))]
 [JsonSerializable(typeof(CarnetReq))]
 [JsonSerializable(typeof(ErrorResp))]
+[JsonSerializable(typeof(TurtleDeck))]
 internal partial class BandJson : JsonSerializerContext { }
 
 /// <summary>
@@ -297,6 +308,24 @@ public sealed class Band
 
     public void Block(string id) => Job(() => Send(HttpMethod.Post, "block", JsonSerializer.Serialize(new IdReq { Id = id }, BandJson.Default.IdReq)));
 
+    /// <summary>Récupère le carnet public (collection, stats) d'une autre tortue. `done` est appelé sur le thread UI.</summary>
+    public void FetchTurtle(string id, Action<TurtleDeck?, string?> done)
+    {
+        Job(async () =>
+        {
+            TurtleDeck? deck = null;
+            string? err = null;
+            try
+            {
+                var (code, body) = await Send(HttpMethod.Get, $"turtle/{id}", null);
+                if (code == HttpStatusCode.OK) deck = JsonSerializer.Deserialize(body, BandJson.Default.TurtleDeck);
+                else err = Error(body);
+            }
+            catch { err = "hors_ligne"; }
+            Ui(() => done(deck, deck is null ? err ?? "erreur" : null));
+        });
+    }
+
     public void PushCarnet(CarnetReq c)
     {
         var json = JsonSerializer.Serialize(c, BandJson.Default.CarnetReq);
@@ -321,6 +350,7 @@ public sealed class Band
         "deja_en_visite" => "déjà en visite",
         "nom_pris" => "ce nom est déjà pris",
         "nom_invalide" => "nom invalide (2 à 16 lettres)",
+        "introuvable" => "cette tortue est introuvable",
         "hors_ligne" => "pas de connexion",
         _ => "ça n'a pas marché",
     };

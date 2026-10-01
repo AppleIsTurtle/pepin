@@ -624,3 +624,28 @@ def test_bande_publique(client, horloge):
     assert [t["id"] for t in d["turtles"]] == [a["id"], b["id"]]   # en ligne d'abord
     assert set(d["turtles"][0]) == {"id", "name", "tier", "online"}  # rien de plus que la page publique
     assert "token" not in r.text
+
+
+def test_carnet_trouvailles_et_consultation(client, horloge):
+    a, b = inscrire(client), inscrire(client)
+    corps = {
+        "tier": 3, "bond": 5.0, "stats": {"finds": 4},
+        "collection": {"fraise": 2, "coccinelle": 1, "papillon": 0, "licorne": 5},
+        "journal": [{"t": T0, "text": "secret"}],
+    }
+    assert client.put("/api/carnet", json=corps, headers=b["h"]).status_code == 200
+    r = client.get(f"/api/turtle/{b['id']}", headers=a["h"])
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["id"] == b["id"] and d["tier"] == 3
+    assert d["collection"] == {"fraise": 2, "coccinelle": 1, "papillon": 0}
+    assert d["stats"] == {"finds": 4} and "journal" not in d
+    # tortue sans carnet, inconnue, id invalide, sans jeton
+    assert client.get(f"/api/turtle/{a['id']}", headers=b["h"]).json()["collection"] == {}
+    assert client.get("/api/turtle/zzzzzzzz", headers=a["h"]).status_code == 404
+    assert client.get("/api/turtle/pas-un-id", headers=a["h"]).status_code == 404
+    assert client.get(f"/api/turtle/{b['id']}").status_code == 401
+    # un blocage, dans un sens ou dans l'autre, la rend introuvable
+    assert client.post("/api/block", json={"id": b["id"]}, headers=a["h"]).status_code == 200
+    assert client.get(f"/api/turtle/{b['id']}", headers=a["h"]).status_code == 404
+    assert client.get(f"/api/turtle/{a['id']}", headers=b["h"]).status_code == 404

@@ -28,6 +28,19 @@ SOUVENIRS = {
     "bouton": "un bouton",
 }
 
+# Trouvailles dans l'herbe (objets, puis animaux) : jamais offertes en souvenir, mais présentes dans la collection.
+TROUVAILLES = {
+    "champignon": "un champignon",
+    "pissenlit": "un pissenlit",
+    "coccinelle": "une coccinelle",
+    "escargot": "un escargot",
+    "grenouille": "une grenouille",
+    "papillon": "un papillon",
+}
+
+# Tout ce qui peut figurer dans une collection (ordre = ordre d'affichage).
+COLLECTION = {**SOUVENIRS, **TROUVAILLES}
+
 # Activités partagées pendant une visite.
 ACTIVITES = {
     "renifler": "se sont reniflés",
@@ -53,4 +66,6 @@ STATS = {
     "gifts": "cadeaux offerts",
     "bowling": "parties de bowling",
     "strikes": "strikes au bowling",
+    "finds": "trouvailles dans l'herbe",
+    "critters": "bêtes rencontrées",
 }

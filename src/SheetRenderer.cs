@@ -94,13 +94,13 @@ public static class SheetRenderer
         TurtleArt.DrawIcon(icon);
         icon.SavePng(Path.Combine(dir, "icone-256.png"), 16, 0);
 
-        // souvenirs (pages carnet du serveur) : 8×8 px logiques, ×6
+        // souvenirs et trouvailles (pages carnet du serveur) : 10×10 px logiques, ×6
         Directory.CreateDirectory(Path.Combine(dir, "items"));
-        var it = new PixelCanvas(8, 8);
+        var it = new PixelCanvas(10, 10);
         foreach (Item item in Enum.GetValues<Item>())
         {
             it.Clear();
-            Glyphs.Draw(it, Glyphs.ForItem(item), 4, 4);
+            Glyphs.Draw(it, Glyphs.ForItem(item), 5, 5);
             it.SavePng(Path.Combine(dir, "items", Items.Id(item) + ".png"), 6, 0);
         }
     }

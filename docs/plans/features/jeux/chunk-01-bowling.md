@@ -1,7 +1,8 @@
 # Chunk 01 — Bowling
 
-**Statut** : code écrit le 2026-10-01, **jamais compilé** (pas de SDK .NET 10 ni de VS C++ sur la machine de dev à ce
-moment-là) — Parent : [plan.md](plan.md)
+**Statut** : code écrit le 2026-10-01, compile (SDK .NET 10 utilisateur, sans NativeAOT : pas de VS C++ sur la machine
+de dev) ; `dotnet run -- --preview` simule un lancer et en dessine les images ; jamais essayé en vrai à l'écran
+— Parent : [plan.md](plan.md)
 
 ## Fichiers
 - `src/Overlay.cs` (nouveau) — fenêtre layered traversable qui affiche une `PixelCanvas` en gros pixels, placée sous la tortue
@@ -22,7 +23,7 @@ moment-là) — Parent : [plan.md](plan.md)
 - Les quilles sont dessinées dans une toile de 70×68 px logiques ; le lancer à ~700 px/s atteint la quille de tête à 100 %
 
 ## À vérifier à la première compilation
-1. Ça compile (le code a été relu à la main, jamais compilé)
+1. (fait) Ça compile ; `--preview` montre les quilles qui tombent pour un lancer au centre
 2. Menu Jeux → Bowling : elle va se placer, les quilles tombent, « Lance-moi ! »
 3. Lancer fort vers les quilles : elles tombent, les tombées disparaissent, bilan correct, deuxième lancer
 4. Ne rien faire : abandon après ~55 s, quilles disparues, pas de fenêtre résiduelle

@@ -20,6 +20,7 @@ public sealed class Pet
     public Life? Life;
     public Band? Band;
     public Bowling? Bowl;                     // mini-jeu de bowling (tortue de la maison seulement)
+    public GrassEvent? Grass;                 // évènement « touffe d'herbe » (tortue de la maison seulement)
     public bool IsGuest;                      // tortue d'un ami en visite chez nous
     public Pet? Partner;                      // l'autre tortue pendant une visite
     public bool CursorOnMe;                   // le curseur est sur un pixel de la tortue (renseigné par Creature)

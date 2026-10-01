@@ -31,9 +31,10 @@ Il remarque aussi : quand tu es inactif (> 3 min il s'ennuie, > 8 min il dort), 
 (il te dit bonjour), et quand la souris file à toute vitesse près de lui (sursaut ou cachette).
 
 ## Menu
-État et jauges · **Carnet** (lien, journée, dernières entrées, carnet en ligne) · **La bande** (envoyer en visite au hasard
+État et jauges · **Carnet** (lien, journée, dernières entrées, **ma collection**, carnet en ligne) · **La bande** (envoyer en visite au hasard
 ou chez quelqu'un, avec un petit mot, visites spontanées, accepter les petits mots, renommer, bloquer un visiteur, voir la
-bande en ligne) · réveiller / mettre au lit · l'appeler ici · taille (petit / moyen / grand, adaptée au zoom Windows) ·
+bande en ligne, **voir la collection d'une autre tortue**) · **Jeux** (bowling, touffe d'herbe, propositions
+spontanées on/off) · réveiller / mettre au lit · l'appeler ici · taille (petit / moyen / grand, adaptée au zoom Windows) ·
 pause (le cacher) · lancer au démarrage de Windows · version · quitter.
 
 ## Les fenêtres et tes applis
@@ -41,6 +42,12 @@ Il grimpe sur le bord des fenêtres (et tombe si tu les secoues, réduis ou ferm
 sont gommés : il reste toujours au premier plan), et pousse rarement une fenêtre de quelques pixels — jamais une fenêtre
 maximisée, et il s'arrête dès que tu bouges. Il regarde tes vidéos, stresse pendant un rendu Houdini/Blender/…, pique du nez
 quand tu tapes longtemps. Détection 100 % locale : rien n'est envoyé, rien d'applicatif n'apparaît dans le carnet public.
+
+## Jeux et évènements
+Rares et discrets (désactivables dans Jeux). **Bowling** : elle installe 6 quilles, tu la lances dessus comme d'habitude
+(2 lancers par tour, strike possible). **Touffe d'herbe** : elle pousse en bas de l'écran ; un clic dessus peut ne rien
+donner, faire jaillir un objet ou faire sortir une petite bête (coccinelle, escargot, grenouille, papillon). Tout ce que tu
+trouves va dans la collection (16 cases, visible dans le menu et chez les autres tortues de la bande).
 
 ## Le lien et le carnet
 Le lien se construit sur des semaines (câlins, temps passé ensemble, jeux, cadeaux, visites ; les lancers et les clics en
@@ -80,6 +87,7 @@ Les images de la page se régénèrent avec `dotnet run -- --frames site/img`.
 dotnet run -- --sheet planche.png   # toutes les poses et expressions sur une image
 dotnet run -- --frames site/img     # sprites et souvenirs transparents pour le site
 dotnet run -- --simulate 3          # 3 h de vie simulée + une visite à deux simulée : comportements, anomalies
+dotnet run -- --preview preview    # carte de collection, touffe d'herbe et bowling simulé en PNG
 dotnet run -- --windows             # fenêtres vues, perches, applis détectées (diagnostic)
 dotnet run -- --bandtest <id>       # une tortue de test rend visite à <id> (instance réelle) et attend son retour
 ```

@@ -6,6 +6,7 @@ API JSON sous /api, pages publiques /t/{id} et /bande (voir pages.py).
 import hashlib
 import json
 import random
+import re
 import secrets
 import string
 import threading
@@ -22,7 +23,7 @@ from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 import catalogue
 import db
 import pages
-from catalogue import ACTIVITES, SOUVENIRS
+from catalogue import ACTIVITES, COLLECTION, SOUVENIRS
 
 EN_LIGNE = 150            # s : au-delà, une tortue est hors ligne
 ATTENTE_MAX = 150         # s : une visite 'pending' plus vieille → personne à la maison
@@ -502,6 +503,32 @@ def band(moi: Moi):
     } for r in rows]}
 
 
+@app.get("/api/turtle/{tid}")
+def tortue(tid: str, moi: Moi):
+    """Le carnet d'une autre tortue (collection, stats) pour l'afficher dans l'appli. Pas de journal."""
+    if not re.fullmatch(r"[a-z0-9]{8}", tid):
+        raise ApiError(404, "introuvable")
+    t = now()
+    with db.lecture() as c:
+        r = c.execute("SELECT id, name, tier, last_seen, carnet_json FROM turtles WHERE id = ?", (tid,)).fetchone()
+        if r is None or c.execute(
+            "SELECT 1 FROM blocks WHERE (blocker = ? AND blocked = ?) OR (blocker = ? AND blocked = ?)",
+            (moi, tid, tid, moi),
+        ).fetchone():
+            raise ApiError(404, "introuvable")
+        amis = points(c, moi, tid) if tid != moi else 0
+    carnet_json = json.loads(r["carnet_json"]) if r["carnet_json"] else {}
+    return {
+        "id": r["id"],
+        "name": r["name"],
+        "tier": r["tier"],
+        "online": r["last_seen"] >= t - EN_LIGNE,
+        "friendship": amis,
+        "collection": {k: n for k, n in (carnet_json.get("collection") or {}).items() if k in COLLECTION},
+        "stats": carnet_json.get("stats") or {},
+    }
+
+
 @app.post("/api/rename")
 def rename(body: Renommage, moi: Moi):
     nom = nom_valide(body.name)
@@ -550,7 +577,7 @@ def carnet(body: Carnet, moi: Moi):
         "tier": body.tier,
         "bond": body.bond,
         "stats": body.stats,
-        "collection": {k: n for k, n in body.collection.items() if k in SOUVENIRS},
+        "collection": {k: n for k, n in body.collection.items() if k in COLLECTION},
         "journal": journal,
     }
     with db.tx() as c:

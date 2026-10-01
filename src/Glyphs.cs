@@ -74,6 +74,21 @@ public static class Glyphs
     public static readonly string[] Acorn = [".CCC.", "CCCCC", ".ccc.", ".ccc.", "..c.."];
     public static readonly string[] Button = [".ooo.", "ooooo", "oOoOo", "ooooo", ".ooo."];
     public static readonly string[] Tear = [".b.", "bBb", ".B."];
+    public static readonly string[] Mushroom = ["..oooo..", ".owooow.", "oooowooo", ".dddddd.", "...dd...", "...dd..."];
+    public static readonly string[] Dandelion = [".yyy.", "yyYyy", ".yyy.", "..g..", ".gg..", "..g.."];
+    public static readonly string[] Ladybug = [".kkk.", "rrkrr", "rkrkr", ".rrr."];
+    public static readonly string[] Snail = ["..ccc..d.", ".cCCcc.d.", ".cCcCcdd.", "ddddddd.."];
+    public static readonly string[] Frog = ["gkg.gkg", ".ggggg.", "gLLLLLg", "g.g.g.g"];
+    public static readonly string[] Butterfly = ["zz...zz", "zpz.zpz", ".zzkzz.", "zpzkzpz", "zz...zz"];
+    public static readonly string[] Tuft =
+    [
+        "...L....L...",
+        ".L.gL..gL.L.",
+        ".gLgg.LgggLg",
+        "gLggGgggGgLg",
+        "gggGGgGGGggg",
+        ".GGGGGGGGGG.",
+    ];
 
     public static string[] ForItem(Item i) => i switch
     {
@@ -86,6 +101,12 @@ public static class Glyphs
         Item.Plume => Feather,
         Item.Trefle => Clover,
         Item.Gland => Acorn,
+        Item.Champignon => Mushroom,
+        Item.Pissenlit => Dandelion,
+        Item.Coccinelle => Ladybug,
+        Item.Escargot => Snail,
+        Item.Grenouille => Frog,
+        Item.Papillon => Butterfly,
         _ => Button,
     };
     public static readonly string[] SpiralA = ["kkk", "k.k", "k.."];

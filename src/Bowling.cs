@@ -65,6 +65,8 @@ public sealed class Bowling
 
     public Bowling(Overlay overlay) => ov = overlay;
 
+    internal PixelCanvas Canvas => canvas;                 // outil de dev --preview
+
     /// <summary>Images par seconde dont le décor a besoin (0 = rien à animer).</summary>
     public int Fps => pins.Count == 0 || Phase == BowlPhase.Prep ? 0
                     : Phase == BowlPhase.Setup || !Settled || pins.Exists(p => p.Vanish > 0) ? 40 : 10;
@@ -227,8 +229,8 @@ public sealed class Bowling
                 double d = Math.Sqrt(d2), nx = dx / d, ny = dy / d;
                 double vrel = (a.VX - b.VX) * nx + (a.VY - b.VY) * ny;
                 if (vrel <= 0) continue;
-                a.VX -= nx * vrel * 0.9; a.VY -= ny * vrel * 0.9;
-                b.VX += nx * vrel * 0.9; b.VY += ny * vrel * 0.9;
+                a.VX -= nx * vrel * 0.8; a.VY -= ny * vrel * 0.8;
+                b.VX += nx * vrel * 0.8; b.VY += ny * vrel * 0.8;
                 Knock(a); Knock(b);
             }
     }
@@ -246,7 +248,7 @@ public sealed class Bowling
     {
         double tvx = pet.VX, tvy = pet.VY, sp = Math.Sqrt(tvx * tvx + tvy * tvy);
         if (sp < 90) return;
-        double cx = pet.X, cy = pet.Y - 3 * s, thr = (8 + 2.5) * s;
+        double cx = pet.X, cy = pet.Y - 3 * s, thr = (6.5 + 2.5) * s;
         foreach (var p in pins)
         {
             if (p.Vanish > 0 || p.Pop < 1) continue;

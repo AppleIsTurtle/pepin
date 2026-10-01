@@ -3,11 +3,17 @@ using static Pepin.Native;
 namespace Pepin;
 
 /// <summary>
-/// Petite fenêtre layered qui affiche une <see cref="PixelCanvas"/> en gros pixels, sans jamais attraper la souris
-/// (décor des mini-jeux, objets du monde). Placée juste derrière la fenêtre de la tortue pour qu'elle passe devant.
+/// Petite fenêtre layered qui affiche une <see cref="PixelCanvas"/> en gros pixels (décor des mini-jeux, objets du
+/// monde, cartes). Par défaut elle ne prend jamais la souris ; en mode <c>clickable</c> seuls ses pixels opaques
+/// reçoivent le clic (les transparents laissent passer). Placée juste derrière la tortue pour qu'elle passe devant.
 /// </summary>
 public sealed unsafe class Overlay
 {
+    static readonly Dictionary<nint, Overlay> byHwnd = [];
+    public static Overlay? From(nint hwnd) => byHwnd.GetValueOrDefault(hwnd);
+
+    readonly bool clickable;
+    public Action? Click;                    // clic gauche sur un pixel opaque (mode clickable)
     nint hwnd, memDc, dib, oldBmp;
     uint* bits;
     int bmpW, bmpH, curScale;
@@ -15,13 +21,16 @@ public sealed unsafe class Overlay
     bool visible;
     int lastX = int.MinValue, lastY;
 
+    public Overlay(bool clickable = false) => this.clickable = clickable;
+
     public bool Created => hwnd != 0;
     public bool Visible => visible;
 
     public void Create(nint inst)
     {
-        hwnd = CreateWindowExW(WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT,
-                               App.WindowClass, "Pépin (décor)", WS_POPUP, 0, 0, 1, 1, 0, 0, inst, 0);
+        uint ex = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | (clickable ? 0 : WS_EX_TRANSPARENT);
+        hwnd = CreateWindowExW(ex, App.WindowClass, "Pépin (décor)", WS_POPUP, 0, 0, 1, 1, 0, 0, inst, 0);
+        byHwnd[hwnd] = this;
         memDc = CreateCompatibleDC(App.ScreenDc);
     }
 
@@ -29,7 +38,14 @@ public sealed unsafe class Overlay
     {
         if (dib != 0) { SelectObject(memDc, oldBmp); DeleteObject(dib); dib = 0; }
         if (memDc != 0) { DeleteDC(memDc); memDc = 0; }
-        if (hwnd != 0) { DestroyWindow(hwnd); hwnd = 0; }
+        if (hwnd != 0) { byHwnd.Remove(hwnd); DestroyWindow(hwnd); hwnd = 0; }
+    }
+
+    /// <summary>Message souris reçu par la fenêtre (routé par App). Vrai si traité.</summary>
+    public bool HandleMouse(uint m)
+    {
+        if (m == WM_LBUTTONDOWN) { Click?.Invoke(); return true; }
+        return m is WM_LBUTTONUP or WM_MOUSEMOVE or WM_CAPTURECHANGED;
     }
 
     public void Hide()
