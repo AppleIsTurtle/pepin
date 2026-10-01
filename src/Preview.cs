@@ -212,7 +212,7 @@ public static class Preview
             Name = "Pistou", Species = Simulator.Species, Tier = 2, Affection = 0.72, Energy = 0.45, Belly = 0.8,
             Summary = "Lien : Ami (40 % vers meilleur ami)", Today = "Aujourd'hui : 2 goûters, 1 sieste, 4 câlins",
             CanPlay = true, CanGrass = true, CanSend = true, Autostart = true, Spontaneous = true, Messages = true,
-            MiniGames = false, Registered = true, SizeLevel = 3, Version = "3.0.0", BandStatus = "3/7 EN LIGNE",
+            MiniGames = false, Registered = true, SizeLevel = 3, Version = "3.0.1", BandStatus = "3/7 EN LIGNE",
         };
         m.Portrait.Eyes = Eyes.Happy; m.Portrait.Mouth = Mouth.Smile; m.Portrait.Blush = true;
         m.Band.Add(new BandEntry("a", "Trèfle", true, true, Species.Tortue));
@@ -237,10 +237,10 @@ public static class Preview
 
         // état « moins rose » : visite en cours, endormi, jeux bloqués, œuf
         var busy = new MenuModel { Name = "Pistou", Species = Simulator.Species, Tier = 4, Affection = 1, Energy = 0.1, Belly = 0.2,
-                                   Asleep = true, Paused = true, Version = "3.0.0", GuestName = "Clémentine d'Été", BandStatus = "1/7 EN LIGNE" };
+                                   Asleep = true, Paused = true, Version = "3.0.1", GuestName = "Clémentine d'Été", BandStatus = "1/7 EN LIGNE" };
         busy.Portrait.Eyes = Eyes.Closed; busy.Portrait.HeadOut = .6f; busy.Portrait.LegsTuck = 3;
         busy.Band.AddRange(m.Band);
-        var egg = new MenuModel { Name = "???", Egg = true, Version = "3.0.0" };
+        var egg = new MenuModel { Name = "???", Egg = true, Version = "3.0.1" };
         var sheet2 = new PixelCanvas(3 * (MenuPanel.W + gap) + gap, MenuPanel.H + gap * 2);
         MenuPanel.RenderForPreview(busy, MenuPage.Home).BlitTo(sheet2, gap, gap);
         MenuPanel.RenderForPreview(busy, MenuPage.Band).BlitTo(sheet2, gap * 2 + MenuPanel.W, gap);
