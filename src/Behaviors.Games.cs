@@ -63,7 +63,7 @@ sealed class BowlWait : Behavior
         p.Breathe();
         if (T > nextHint)
         {
-            p.Say(b.Throws == 0 ? "Lance-moi !" : "Encore une fois !", 3.5);
+            p.Say(b.Throws == 0 ? "1er essai : lance-moi !" : $"2e essai ! Il en reste {Bowling.PinCount - b.Fell}", 3.5);
             nextHint = T + 25;
         }
     }
@@ -98,8 +98,8 @@ sealed class BowlReact : Behavior
                 {
                     ThrowResult.Strike => "STRIKE !",
                     ThrowResult.Spare => "Toutes tombées !",
-                    ThrowResult.Some => $"{b.Fell} sur {Bowling.PinCount}",
-                    _ => "Raté...",
+                    ThrowResult.Some => b.RoundOver ? $"{b.Fell} sur {Bowling.PinCount}, fin !" : $"{b.Fell} sur {Bowling.PinCount}",
+                    _ => b.RoundOver ? "Raté... fin !" : "Raté...",
                 }, 2.5);
             }
             return;
