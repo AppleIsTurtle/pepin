@@ -34,9 +34,9 @@ public sealed class DeckView
 
     /// <param name="mine">Notre collection, pour repérer ce que l'autre a et pas nous (null = c'est la nôtre).</param>
     public void Show(string name, string subtitle, IReadOnlyDictionary<string, int> collection,
-                     IReadOnlyDictionary<string, int>? mine, RECT work, int scale)
+                     IReadOnlyDictionary<string, int>? mine, Species species, RECT work, int scale)
     {
-        canvas = Render(name, subtitle, collection, mine);
+        canvas = Render(name, subtitle, collection, mine, species);
         int x = work.Left + (work.Right - work.Left - CW * scale) / 2;
         int y = work.Top + (work.Bottom - work.Top - CH * scale) / 2;
         ov.Present(canvas, scale, x, y);
@@ -44,7 +44,8 @@ public sealed class DeckView
     }
 
     /// <summary>Dessine la carte (aussi utilisé par l'outil de dev --preview).</summary>
-    public static PixelCanvas Render(string name, string subtitle, IReadOnlyDictionary<string, int> col, IReadOnlyDictionary<string, int>? mine)
+    public static PixelCanvas Render(string name, string subtitle, IReadOnlyDictionary<string, int> col, IReadOnlyDictionary<string, int>? mine,
+                                     Species? species = null)
     {
         var c = new PixelCanvas(CW, CH);
         uint ink = Glyphs.K, paper = PixelCanvas.Rgb(250, 246, 235), cell = PixelCanvas.Rgb(236, 228, 208);
@@ -60,6 +61,13 @@ public sealed class DeckView
                 c.Set(x, y, edge ? ink : paper, Layer.Fx);
             }
 
+        if (species is Species sp)
+        {
+            // la tête de l'espèce dans le coin
+            var ic = new PixelCanvas(16, 16);
+            SpeciesArt.DrawIcon(ic, sp);
+            ic.BlitTo(c, 4, 4);
+        }
         PixelFont.DrawCentered(c, name, CW / 2, 9, ink);
         PixelFont.DrawCentered(c, subtitle, CW / 2, 19, dim);
 

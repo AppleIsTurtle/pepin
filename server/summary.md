@@ -6,19 +6,20 @@ tortues, pages publiques. Plan : [../docs/plans/features/bande/chunk-01-serveur.
 | Fichier | Rôle | Dépendances |
 |---|---|---|
 | `app.py` | app FastAPI : limite de corps 32 Ko, auth Bearer, limites de débit, `/api/*`, routes des pages, horloge `now()` remplaçable en test | db, pages, catalogue |
-| `db.py` | schéma, `connect()`, `init()` (WAL), `tx()` en `BEGIN IMMEDIATE`, lecture ; `DB_PATH` depuis l'env | sqlite3 |
-| `pages.py` | `/t/{id}` (carnet) et `/bande`, CSS inline autorisée par empreinte CSP, dates en français (heure de Paris calculée sans base tz) | db, catalogue |
-| `catalogue.py` | noms aléatoires, souvenirs, activités, paliers, libellés des stats | — |
+| `db.py` | schéma, `connect()`, `init()` (WAL + `migrer()` : colonne `species`, v3), `tx()` en `BEGIN IMMEDIATE`, lecture ; `DB_PATH` depuis l'env | sqlite3 |
+| `pages.py` | `/t/{id}` (carnet, portrait de l'espèce) et `/bande` (mini-portraits), CSS inline autorisée par empreinte CSP, dates en français (heure de Paris calculée sans base tz) ; `sprite(espece)` : tortue à la racine de `/friend/img/`, les autres dans `/friend/img/<espece>/` | db, catalogue |
+| `catalogue.py` | noms aléatoires, souvenirs, activités, paliers (palier 0 « Nouveau venu »), espèces (`ESPECES`), libellés des stats | — |
 | `requirements.txt`, `Dockerfile`, `docker-compose.yml`, `.dockerignore` | déploiement (service `louann-bande`, 127.0.0.1:${PORT:-3060}, 128 Mo, 0,5 CPU, uid 1000) | — |
 | `tests/` | tests pytest — voir [tests/summary.md](tests/summary.md) | pytest, httpx |
 | `.venv/` | environnement local de test (hors image Docker) | — |
 
 ## Base
-`turtles` (id, token_hash, name, name_key unique casefold, last_seen, status, tier, version, accept_messages, carnet_json) ·
+`turtles` (id, token_hash, name, name_key unique casefold, last_seen, status, tier, version, accept_messages, carnet_json, species — défaut `tortue`) ·
 `visits` (from/to, message, state pending→active→done|aborted|no_one_home, duration, souvenir, played) ·
 `friendships` (paire a<b, points) · `blocks` · `events` (file par destinataire, acquittée par heartbeat).
 
 ## Endpoints
+`species` (v3, liste blanche `ESPECES`, optionnelle : absente = tortue / inchangée) acceptée par `register` et `heartbeat`, renvoyée par `band`, `turtle`, `public/band`, les visites (`from`, `host`).
 `GET /api/health` · `POST /api/register` (10/h/IP) · `POST /api/heartbeat` (1 / 4 s) · `POST /api/visit` (6/h) ·
 `POST /api/visit/{id}/accept|end|abort` · `GET /api/band` (avec `blocked`) · `POST /api/rename` · `POST /api/block|unblock` ·
 `PUT /api/carnet` · `GET /api/turtle/{id}` (collection et stats d'une autre tortue, 404 si bloquée) · `GET /api/public/band` (sans jeton : même contenu que la page /bande, pour /friend/) ·

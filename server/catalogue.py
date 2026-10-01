@@ -51,7 +51,17 @@ ACTIVITES = {
 }
 
 # Paliers du lien avec son humain (index = tier).
-PALIERS = ["Nouvelle tortue", "Copain", "Ami", "Meilleur ami", "Inséparable"]
+PALIERS = ["Nouveau venu", "Copain", "Ami", "Meilleur ami", "Inséparable"]
+
+# Les compagnons qui peuvent sortir de l'œuf (v3). Code → nom affiché (avec article).
+ESPECES = {
+    "tortue": "une tortue",
+    "herisson": "un hérisson",
+    "grenouille": "une grenouille",
+    "escargot": "un escargot",
+    "panda-roux": "un panda roux",
+    "axolotl": "un axolotl",
+}
 
 # Libellés des statistiques connues du carnet (ordre = ordre d'affichage).
 STATS = {

@@ -46,14 +46,13 @@ public static unsafe partial class Native
     public const uint WS_EX_LAYERED = 0x80000, WS_EX_TOPMOST = 0x8, WS_EX_TOOLWINDOW = 0x80, WS_EX_NOACTIVATE = 0x08000000;
     public const uint WM_DESTROY = 0x2, WM_QUERYENDSESSION = 0x11, WM_ENDSESSION = 0x16, WM_SETCURSOR = 0x20, WM_MOUSEACTIVATE = 0x21,
         WM_TIMER = 0x113, WM_MOUSEMOVE = 0x200, WM_LBUTTONDOWN = 0x201, WM_LBUTTONUP = 0x202, WM_RBUTTONUP = 0x205,
-        WM_CAPTURECHANGED = 0x215, WM_NULL = 0, WM_APP = 0x8000;
+        WM_CAPTURECHANGED = 0x215, WM_APP = 0x8000, WM_ACTIVATE = 0x6, WM_KEYDOWN = 0x100, WM_RBUTTONDOWN = 0x204;
+    public const int VK_ESCAPE = 0x1B, MA_ACTIVATE = 1, SW_SHOW = 5;
     public const int MA_NOACTIVATE = 3, SW_HIDE = 0, SW_SHOWNOACTIVATE = 4;
     public const uint ULW_ALPHA = 2;
     public const uint SWP_NOSIZE = 1, SWP_NOMOVE = 2, SWP_NOZORDER = 4, SWP_NOACTIVATE = 0x10;
     public static readonly nint HWND_TOPMOST = -1;
-    public const uint MF_STRING = 0, MF_GRAYED = 1, MF_CHECKED = 8, MF_POPUP = 0x10, MF_SEPARATOR = 0x800;
-    public const uint TPM_RIGHTBUTTON = 2, TPM_RETURNCMD = 0x100, TPM_NONOTIFY = 0x80, TPM_BOTTOMALIGN = 0x20;
-    public const uint NIM_ADD = 0, NIM_DELETE = 2, NIF_MESSAGE = 1, NIF_ICON = 2, NIF_TIP = 4;
+    public const uint NIM_ADD = 0, NIM_MODIFY = 1, NIM_DELETE = 2, NIF_MESSAGE = 1, NIF_ICON = 2, NIF_TIP = 4;
     public const nint IDC_HAND = 32649;
     public const uint MONITOR_DEFAULTTONEAREST = 2;
     public static readonly nint DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = -4;
@@ -79,13 +78,7 @@ public static unsafe partial class Native
     [LibraryImport("user32.dll")] public static partial int GetLastInputInfo(LASTINPUTINFO* lii);
     [LibraryImport("user32.dll")] public static partial int SetWindowPos(nint hwnd, nint after, int x, int y, int cx, int cy, uint flags);
     [LibraryImport("user32.dll")] public static partial int ShowWindow(nint hwnd, int cmd);
-    [LibraryImport("user32.dll")] public static partial nint CreatePopupMenu();
-    [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16)]
-    public static partial int AppendMenuW(nint menu, uint flags, nuint id, string? text);
-    [LibraryImport("user32.dll")] public static partial int TrackPopupMenu(nint menu, uint flags, int x, int y, int reserved, nint hwnd, nint rect);
-    [LibraryImport("user32.dll")] public static partial int DestroyMenu(nint menu);
     [LibraryImport("user32.dll")] public static partial int SetForegroundWindow(nint hwnd);
-    [LibraryImport("user32.dll")] public static partial int PostMessageW(nint hwnd, uint msg, nint w, nint l);
     [LibraryImport("user32.dll")] public static partial nint CreateIconIndirect(ICONINFO* ii);
     [LibraryImport("user32.dll")] public static partial int DestroyIcon(nint icon);
     [LibraryImport("user32.dll")] public static partial nint LoadCursorW(nint inst, nint id);
@@ -120,4 +113,5 @@ public static unsafe partial class Native
     public static partial nint CreateMutexW(nint attrs, int initialOwner, string name);
 
     public static int LoWord(nint v) => (short)((long)v & 0xFFFF);
+    public static int HiWord(nint v) => (short)(((long)v >> 16) & 0xFFFF);
 }

@@ -233,7 +233,7 @@ sealed class NewShell : Behavior
         if (T < 0.8) { v.InShell = true; v.SpinFrame = (int)(T * 12) & 3; }
         else { v.Eyes = Eyes.Happy; v.Mouth = Mouth.Grin; Hop(p, (T - 0.8) % 0.5, 0.5, T < 2 ? 4 : 0); }
         v.Add(FxKind.Sparkles, (float)(T * 0.8));
-        if (T > 0.85 && T < 0.95) p.Say("Nouvelle carapace !", 2.5);
+        if (T > 0.85 && T < 0.95) p.Say(p.Species == Species.Tortue ? "Nouvelle carapace !" : "Tout beau, tout neuf !", 2.5);
         if (T > 3) { p.Z = 0; Done = true; }
     }
 }

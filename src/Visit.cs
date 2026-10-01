@@ -35,11 +35,15 @@ public sealed class HostVisit
         this.home = home;
         this.band = band;
         this.life = life;
-        guestName = info.From?.Name ?? "Une tortue";
+        guestName = info.From?.Name ?? "Un ami";
 
         var senses = new Senses();
         var mood = new Mood { Energy = 0.9, Hunger = 0.2, Happiness = 0.8, Affection = 0.5 };
-        var pet = new Pet(mood, senses, new Idle()) { IsGuest = true, Partner = home.Pet, X = home.Pet.X, Y = home.Pet.Y, Scale = home.Scale };
+        var pet = new Pet(mood, senses, new Idle())
+        {
+            IsGuest = true, Partner = home.Pet, X = home.Pet.X, Y = home.Pet.Y, Scale = home.Scale,
+            Species = SpeciesInfo.Parse(info.From?.Species),        // le visiteur garde sa vraie forme
+        };
         senses.Update(App.Now, 0, pet.X, pet.Y);
         pet.Switch(new Arrive());
         Guest = new Creature(pet, senses);

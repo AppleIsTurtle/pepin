@@ -13,10 +13,10 @@ DIST="$(mktemp -d)"
 VERSION="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Pepin.csproj)"
 SHA="$(sha256sum publish/Pepin.exe | cut -d' ' -f1)"
 
-mkdir -p "$DIST/img/items"
 cp publish/Pepin.exe "$DIST/"
-cp site/img/*.png "$DIST/img/"
-cp site/img/items/*.png "$DIST/img/items/"
+# images : la tortue à la racine, les objets, les autres espèces et l'œuf dans leurs sous-dossiers
+mkdir -p "$DIST/img"
+cp -r site/img/. "$DIST/img/"
 # lu par la mise à jour automatique des tortues déjà installées
 printf '{"version":"%s","sha256":"%s","url":"https://pommetortue.tech/friend/Pepin.exe"}\n' "$VERSION" "$SHA" > "$DIST/version.json"
 sed -e "s/{{VERSION}}/$VERSION/g" -e "s/{{SHA256}}/$SHA/g" site/index.html > "$DIST/index.html"

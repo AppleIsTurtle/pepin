@@ -109,6 +109,47 @@ public static class Glyphs
         Item.Papillon => Butterfly,
         _ => Button,
     };
+
+    // ---------------------------------------------------------------- icônes du menu ('#' = couleur d'encre choisie)
+    public static readonly string[] IcoPin =
+        ["..##..", ".####.", "..##..", ".rrrr.", ".####.", "######", "######", "######", ".####."];
+    public static readonly string[] IcoSprout =
+        [".....#....", "..##.#.##.", ".####.####", ".###.#.###", "..#..#..#.", ".....#....", ".....#....", "..CCCCCC..", ".CCCCCCCC.", "..CCCCCC.."];
+    public static readonly string[] IcoLetter =
+        ["kkkkkkkkkkkk", "kk########kk", "k#k######k#k", "k##k####k##k", "k###krrk###k", "k####kk####k", "k##########k", "kkkkkkkkkkkk"];
+    public static readonly string[] IcoBook =
+        [".kkkkkkkkk.", "kwwwwkwwwwk", "kwppwkwyywk", "kwppwkwyywk", "kwwwwkwwwwk", "kwggwkwBBwk", "kwggwkwBBwk", "kwwwwkwwwwk", ".kkkkkkkkk."];
+    public static readonly string[] IcoMoon = ["..####.", ".###...", "###....", "###..#.", "###....", ".###...", "..####."];
+    public static readonly string[] IcoSun = ["#..#..#", ".#.#.#.", "..###..", "#######", "..###..", ".#.#.#.", "#..#..#"];
+    public static readonly string[] IcoHere = [".###.", "#####", "##.##", "#####", ".###.", "..#..", "..#.."];
+    public static readonly string[] IcoGear = ["..#.#..", ".#####.", "###.###", "##...##", "###.###", ".#####.", "..#.#.."];
+    public static readonly string[] IcoNotebook = ["######.", "#....##", "#.##.##", "#....##", "#.##.##", "#....##", "######."];
+    public static readonly string[] IcoPause = ["##.##", "##.##", "##.##", "##.##", "##.##"];
+    public static readonly string[] IcoPlay = ["#....", "###..", "#####", "###..", "#...."];
+    public static readonly string[] IcoCross = ["#...#", ".#.#.", "..#..", ".#.#.", "#...#"];
+    public static readonly string[] IcoBolt = ["...##", "..##.", ".####", "####.", ".##..", "##..."];
+    public static readonly string[] IcoLock = [".###.", "#...#", "#####", "##.##", "#####"];
+    public static readonly string[] IcoBack = ["..#...", ".#....", "######", ".#....", "..#..."];
+    public static readonly string[] IcoDice = ["#######", "#.....#", "#.#.#.#", "#.....#", "#.#.#.#", "#.....#", "#######"];
+    public static readonly string[] IcoSmallLetter = ["#######", "##...##", "#.#.#.#", "#..#..#", "#######"];
+    public static readonly string[] IcoSmallBook = ["##.##", "#.#.#", "#.#.#", "#.#.#", "#####"];
+    public static readonly string[] IcoGlobe = [".###.", "#.#.#", "#####", "#.#.#", ".###."];
+    public static readonly string[] IcoPencil = ["....##", "...###", "..###.", ".###..", "###...", "##...."];
+    public static readonly string[] IcoNo = [".###.", "#..##", "#.#.#", "##..#", ".###."];
+    public static readonly string[] StarShape = ["..#..", ".###.", "#####", ".###.", "#...#"];
+
+    /// <summary>Comme <see cref="DrawAt"/>, mais '#' prend la couleur <paramref name="ink"/>.</summary>
+    public static void DrawTinted(PixelCanvas c, string[] g, int x0, int y0, uint ink, Layer layer = Layer.Fx)
+    {
+        for (int y = 0; y < g.Length; y++)
+            for (int x = 0; x < g[y].Length; x++)
+            {
+                char ch = g[y][x];
+                uint col = ch == '#' ? ink : Color(ch);
+                if (col != 0) c.Set(x0 + x, y0 + y, col, layer);
+            }
+    }
+    public static readonly string[] ShellHat = [".kkkk.", "kwwwdk", "kdkdkk"];
     public static readonly string[] SpiralA = ["kkk", "k.k", "k.."];
     public static readonly string[] SpiralB = ["kk.", "k.k", "kkk"];
 

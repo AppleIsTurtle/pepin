@@ -30,6 +30,7 @@ public sealed class Mood
     public bool AutostartSet;          // le démarrage auto a déjà été activé une première fois
     public LifeData LifeData = new();
     public double HoursAway;           // temps écoulé depuis la dernière sauvegarde
+    public bool FirstRun;              // aucun fichier d'état : toute première installation (pas un fichier illisible)
 
     static string Dir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Pepin");
     static string FilePath => Path.Combine(Dir, "state.json");
@@ -37,7 +38,8 @@ public sealed class Mood
     public static Mood Load()
     {
         SaveData d;
-        try { d = File.Exists(FilePath) ? JsonSerializer.Deserialize(File.ReadAllText(FilePath), SaveJson.Default.SaveData) ?? new() : new(); }
+        bool exists = File.Exists(FilePath);
+        try { d = exists ? JsonSerializer.Deserialize(File.ReadAllText(FilePath), SaveJson.Default.SaveData) ?? new() : new(); }
         catch { d = new(); }
 
         var m = new Mood
@@ -45,6 +47,7 @@ public sealed class Mood
             Energy = d.Energy, Hunger = d.Hunger, Happiness = d.Happiness, Affection = d.Affection,
             Scale = Math.Clamp(d.Scale, 2, 4), SavedX = d.X, SavedY = d.Y, AutostartSet = d.AutostartSet,
             LifeData = d.Life ?? new(),
+            FirstRun = !exists,
         };
         if (d.SavedAtUnix > 0)
         {

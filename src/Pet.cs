@@ -22,6 +22,8 @@ public sealed class Pet
     public Bowling? Bowl;                     // mini-jeu de bowling (tortue de la maison seulement)
     public GrassEvent? Grass;                 // évènement « touffe d'herbe » (tortue de la maison seulement)
     public bool IsGuest;                      // tortue d'un ami en visite chez nous
+    public Species Species = Species.Tortue;  // ce qu'on dessine (et quelques traits de caractère)
+    public SpeciesTraits Traits => SpeciesInfo.Of(Species);
     public Pet? Partner;                      // l'autre tortue pendant une visite
     public bool CursorOnMe;                   // le curseur est sur un pixel de la tortue (renseigné par Creature)
     public RECT? Occluder;                    // fenêtre "devant" la tortue : ses pixels y sont gommés
@@ -109,7 +111,26 @@ public sealed class Pet
 
         if (!Dragging && !OffScreen) ClampToScreen();
         Automatisms(dt);
+        SpeciesReflexes();
     }
+
+    /// <summary>Ce que l'espèce fait d'elle-même par-dessus le comportement (piquants hérissés, dressé…).</summary>
+    void SpeciesReflexes()
+    {
+        var c = Current;
+        switch (Species)
+        {
+            case Species.Herisson:
+                if (c is Surprised or Angry or Grabbed or Dizzy || (c is HideInShell && c.T < 2) || (c is Thrown && V.InShell)) V.Puffed = true;
+                break;
+            case Species.PandaRoux:
+                if ((c is Surprised && c.T < 1.0) || (c is Angry && (int)(c.T / 0.9) % 2 == 0)) V.Stand = true;
+                break;
+        }
+    }
+
+    /// <summary>`f` pour l'espèce `s`, 1 pour les autres (petits écarts de personnalité).</summary>
+    double For(Species s, double f) => Species == s ? f : 1;
 
     void Automatisms(double dt)
     {
@@ -124,7 +145,8 @@ public sealed class Pet
         // les yeux suivent le curseur
         if (Current.TrackEyes && V.Eyes is Eyes.Normal or Eyes.Wide or Eyes.Determined or Eyes.HalfLid)
         {
-            double hxs = X + (V.FacingRight ? 11 : -11) * Scale, hys = Y - Z - 14 * Scale;
+            var tr = Traits;
+            double hxs = X + (V.FacingRight ? tr.HeadX : -tr.HeadX) * Scale, hys = Y - Z - tr.HeadY * Scale;
             double dx = S.CX - hxs, dy = S.CY - hys;
             if (dx * dx + dy * dy < 700 * 700)
             {
@@ -159,7 +181,7 @@ public sealed class Pet
         PettingContinuous = BeingPetted ? PettingContinuous + dt : 0;
         if (BeingPetted)
         {
-            M.Affection += 0.004 * dt;      // l'attachement se construit sur des jours
+            M.Affection += 0.004 * dt * For(Species.Axolotl, 1.1);      // l'attachement se construit sur des jours
             M.Happiness += 0.03 * dt;
             Life?.AddBond(dt / 10);
             if (!was) Life?.Count("pets");
@@ -285,12 +307,12 @@ public sealed class Pet
         if (S.IdleSeconds > 480 || e < 0.1 || (night && bored)) return new Sleep();
 
         picks.Clear();
-        Add(3, () => new Idle());
-        Add(2.2 * e, () => new Wander());
-        Add(1.5 + 2 * (1 - e) + (bored ? 2 : 0), () => new Rest());
+        Add(3 * For(Species.Axolotl, 1.2), () => new Idle());
+        Add(2.2 * e * For(Species.Grenouille, 1.2), () => new Wander());
+        Add((1.5 + 2 * (1 - e) + (bored ? 2 : 0)) * For(Species.Grenouille, 0.8) * For(Species.Escargot, 1.3), () => new Rest());
         Add(0.6 + 1.5 * (1 - e) + (bored ? 1 : 0), () => new Yawn());
         Add(0.5, () => new Stretch());
-        Add(0.8, () => new LookAround());
+        Add(0.8 * For(Species.PandaRoux, 1.3), () => new LookAround());
         Add(Time >= SnackReadyAt && h > 0.15 ? 0.2 + 3 * h : 0, () => new SnackTime());   // gourmand
         Add(hap > 0.55 ? hap : 0, () => new Hum());
         double sleepW = e < 0.3 ? 6 : e < 0.55 ? 0.8 : 0.15;                              // paresseux
@@ -299,22 +321,31 @@ public sealed class Pet
         Add(sleepW, () => new Sleep());
         Add(0.15 * e, () => new Travel());
         Add(0.4, () => new Wiggle());
-        Add(hap < 0.3 ? 2.5 : 0, () => new Sulk());
+        Add(hap < 0.3 ? 2.5 * For(Species.Escargot, 0.7) : 0, () => new Sulk());
+
+        // traits d'espèce
+        if (Species == Species.Herisson) Add(1, () => new SniffGround());
+        if (Species == Species.Grenouille)
+        {
+            Add(0.8 * (0.5 + h), () => new CatchFly());
+            Add(hap > 0.4 ? 0.6 : 0, () => new Croak());
+        }
 
         // jeux avec la souris (rares)
         if (Time >= NextMouseGameAt && e > 0.35 && S.IdleSeconds < 20 && S.CursorOnSameMonitor && !CursorOnMe)
         {
-            Add(0.35 * (0.5 + hap), () => new CircleCursor(), 1);
-            Add(0.3, () => new AttackCursor(quick: false), 1);
-            Add(0.25 * e, () => new ChaseCursor(), 1);
+            double joueur = For(Species.PandaRoux, 1.2);
+            Add(0.35 * (0.5 + hap) * joueur, () => new CircleCursor(), 1);
+            Add(0.3 * joueur, () => new AttackCursor(quick: false), 1);
+            Add(0.25 * e * joueur, () => new ChaseCursor(), 1);
             Add(0.4 * aff, () => new SeekAttention(), 1);
         }
 
         // les fenêtres
         if (Win is not null && Time >= NextWindowGameAt && e > 0.25)
         {
-            Add(0.6, () => new Perch(), 2);
-            Add(0.4, () => new HideBehind(), 2);
+            Add(0.6 * Traits.PerchWeight, () => new Perch(), 2);
+            Add(0.4 * For(Species.Herisson, 1.3), () => new HideBehind(), 2);
         }
         if (Win is not null && Time >= NextPushAt && e > 0.5 && S.IdleSeconds > 3)
             Add(0.25, () => new PushWindow(), 3);
@@ -323,7 +354,7 @@ public sealed class Pet
         if (Apps is not null && Time >= NextAppReactAt)
         {
             if (Apps.Rendering) Add(3, () => new RenderWorry(), 6);
-            if (Apps.Foreground == AppActivity.Video && S.IdleSeconds > 5) Add(3, () => new WatchVideo(), 6);
+            if (Apps.Foreground == AppActivity.Video && S.IdleSeconds > 5) Add(3 * For(Species.Grenouille, 1.3), () => new WatchVideo(), 6);
             if (Apps.TypingStreak > 300) Add(2, () => new KeyboardDoze(), 6);
         }
 
@@ -391,10 +422,22 @@ public sealed class Pet
     public bool WalkTo(double tx, double ty, double speed, double dt)
     {
         double dx = tx - X, dy = ty - Y, d = Math.Sqrt(dx * dx + dy * dy);
+        // en visite, l'escargot fait un effort pour ne pas rester à la traîne
+        speed *= Partner is null ? Traits.WalkSpeed : Math.Max(Traits.WalkSpeed, 0.85);
         double step = speed * Scale * dt;
         V.LegPhase = (int)(Time * speed * 0.6) & 3;
+        if (Traits.Travel == TravelMode.Hop && !OffScreen)
+        {
+            // la grenouille avance par bonds : elle ne progresse qu'en l'air, deux fois plus vite
+            double cyc = Time * 2.2 % 1;
+            bool air = cyc < 0.6;
+            Z = air ? Math.Sin(cyc / 0.6 * Math.PI) * 4 * Scale : 0;
+            step = air ? step * 1.7 : 0;
+            V.LegPhase = air ? 2 : 0;
+            V.LegsTuck = air ? 0 : 1;
+        }
         if (Math.Abs(dx) > 2) V.FacingRight = dx > 0;
-        if (d <= Math.Max(step, 1)) { X = tx; Y = ty; V.LegPhase = 0; return true; }
+        if (d <= Math.Max(step, 1)) { X = tx; Y = ty; V.LegPhase = 0; if (Traits.Travel == TravelMode.Hop) Z = 0; return true; }
         X += dx / d * step;
         Y += dy / d * step;
         return false;
@@ -407,9 +450,9 @@ public sealed class Pet
     }
 
     // marges : toute la toile (tortue + effets autour) reste visible
-    double MinX => S.Work.Left + TurtleArt.AX * Scale;
-    double MaxX => S.Work.Right - (TurtleArt.CW - TurtleArt.AX) * Scale;
-    double MinY => S.Work.Top + TurtleArt.AY * Scale;
+    double MinX => S.Work.Left + SpeciesArt.AX * Scale;
+    double MaxX => S.Work.Right - (SpeciesArt.CW - SpeciesArt.AX) * Scale;
+    double MinY => S.Work.Top + SpeciesArt.AY * Scale;
     double MaxY => S.Work.Bottom - 2 * Scale;
 
     public (double x, double y) ClampPoint(double x, double y) =>

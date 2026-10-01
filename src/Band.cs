@@ -8,7 +8,7 @@ namespace Pepin;
 
 // ---------------------------------------------------------------- messages échangés avec le serveur
 
-public sealed class RegisterReq { public string Version { get; set; } = ""; }
+public sealed class RegisterReq { public string Version { get; set; } = ""; public string? Species { get; set; } }
 public sealed class RegisterResp { public string Id { get; set; } = ""; public string Token { get; set; } = ""; public string Name { get; set; } = ""; }
 public sealed class HeartbeatReq
 {
@@ -17,8 +17,9 @@ public sealed class HeartbeatReq
     public int Tier { get; set; }
     public bool AcceptMessages { get; set; } = true;
     public List<long>? Ack { get; set; }
+    public string? Species { get; set; }
 }
-public sealed class TurtleRef { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public int Tier { get; set; } }
+public sealed class TurtleRef { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public int Tier { get; set; } public string? Species { get; set; } }
 public sealed class VisitDto
 {
     public int Id { get; set; }
@@ -45,6 +46,7 @@ public sealed class BandTurtle
     public bool Online { get; set; }
     public string Status { get; set; } = "";
     public int Friendship { get; set; }
+    public string? Species { get; set; }      // absent chez un serveur d'avant la v3 = tortue
 }
 public sealed class BandList { public List<BandTurtle> Turtles { get; set; } = []; }
 public sealed class NameReq { public string Name { get; set; } = ""; }
@@ -66,6 +68,7 @@ public sealed class TurtleDeck
     public int Tier { get; set; }
     public bool Online { get; set; }
     public int Friendship { get; set; }
+    public string? Species { get; set; }
     public Dictionary<string, int> Collection { get; set; } = [];
     public Dictionary<string, int> Stats { get; set; } = [];
 }
@@ -95,6 +98,7 @@ public sealed class Band
     static string Api => Net.Base + "api/";
 
     readonly LifeData d;                                   // lu/écrit sur le thread UI uniquement
+    public volatile string SpeciesCode = "tortue";         // envoyé à l'inscription et à chaque heartbeat (v3)
     volatile string? token;
     public volatile string Status = "home";                // home | away | sleeping | visiting
     public volatile int Tier;
@@ -202,7 +206,7 @@ public sealed class Band
     async Task Register()
     {
         var (code, body) = await Send(HttpMethod.Post, "register",
-            JsonSerializer.Serialize(new RegisterReq { Version = Updater.Current.ToString() }, BandJson.Default.RegisterReq));
+            JsonSerializer.Serialize(new RegisterReq { Version = Updater.Current.ToString(), Species = SpeciesCode }, BandJson.Default.RegisterReq));
         if (code != HttpStatusCode.Created && code != HttpStatusCode.OK) throw new HttpRequestException(code.ToString());
         var r = JsonSerializer.Deserialize(body, BandJson.Default.RegisterResp)!;
         token = r.Token;
@@ -219,7 +223,7 @@ public sealed class Band
     {
         List<long>? ack = null;
         lock (acks) if (acks.Count > 0) { ack = [.. acks]; acks.Clear(); }
-        var req = new HeartbeatReq { Version = Updater.Current.ToString(), Status = Status, Tier = Tier, AcceptMessages = AcceptMessages, Ack = ack };
+        var req = new HeartbeatReq { Version = Updater.Current.ToString(), Status = Status, Tier = Tier, AcceptMessages = AcceptMessages, Ack = ack, Species = SpeciesCode };
         var (code, body) = await Send(HttpMethod.Post, "heartbeat", JsonSerializer.Serialize(req, BandJson.Default.HeartbeatReq));
         if (code != HttpStatusCode.OK)
         {
@@ -346,11 +350,11 @@ public sealed class Band
     public static string ErrorText(string? error) => error switch
     {
         "personne" => "personne n'est dispo dans la bande",
-        "indisponible" => "cette tortue n'est pas dispo",
+        "indisponible" => "ce compagnon n'est pas dispo",
         "deja_en_visite" => "déjà en visite",
         "nom_pris" => "ce nom est déjà pris",
         "nom_invalide" => "nom invalide (2 à 16 lettres)",
-        "introuvable" => "cette tortue est introuvable",
+        "introuvable" => "ce compagnon est introuvable",
         "hors_ligne" => "pas de connexion",
         _ => "ça n'a pas marché",
     };

@@ -1,8 +1,14 @@
 # Pépin — compagnon de bureau
 
-Une petite tortue en pixel art qui vit par-dessus toutes tes fenêtres. Paresseuse et gourmande :
-elle se promène, grignote, fait la sieste, rêve de fraises, et de temps en temps (rarement)
-s'en prend à ta souris.
+Un petit compagnon en pixel art qui sort d'un œuf et vit par-dessus toutes tes fenêtres. Paresseux et gourmand :
+il se promène, grignote, fait la sieste, rêve de fraises, et de temps en temps (rarement) s'en prend à ta souris.
+
+## Les espèces (v3)
+Au premier lancement, un œuf tombe sur le bureau ; on le tapote (3 à 5 fois) jusqu'à l'éclosion. Six espèces, une chance
+sur six chacune, sans rareté : **tortue** (carapace, toupie), **hérisson** (boule roulante, piquants hérissés, renifle le
+sol), **grenouille** (bonds, gobe des mouches, gorge qui gonfle), **escargot** (très lent, coquille, traînée brillante),
+**panda roux** (se dresse bras levés, dort enroulé dans sa queue, adore se percher), **axolotl** (flotte, branchies qui
+suivent l'humeur). Les installations d'avant la v3 gardent leur tortue. L'espèce est fixée à l'éclosion.
 
 Exe natif de ~5 Mo, ~7 Mo de RAM privée, quasi aucun CPU au repos. Se met à jour tout seul.
 
@@ -10,7 +16,7 @@ Exe natif de ~5 Mo, ~7 Mo de RAM privée, quasi aucun CPU au repos. Se met à jo
 ```
 publish\Pepin.exe
 ```
-Une seule instance à la fois. L'icône de tête de tortue près de l'horloge donne accès au menu.
+Une seule instance à la fois. L'icône près de l'horloge (la tête de ton compagnon) ouvre le menu.
 Au premier lancement il s'inscrit au démarrage de Windows (décochable dans le menu).
 
 Page de téléchargement publique : https://pommetortue.tech/friend/
@@ -23,7 +29,7 @@ Page de téléchargement publique : https://pommetortue.tech/friend/
 | 2-3 clics rapides | « hé ! » |
 | 4 clics rapides ou plus | colère (rouge qui monte, vapeur) — et parfois il mord ta souris |
 | Glisser | tu le prends dans tes mains (il gigote) |
-| Glisser + lâcher en lançant | il rentre dans sa carapace, tournoie, rebondit sur les bords… puis il est sonné |
+| Glisser + lâcher en lançant | il se met en boule (carapace, coquille…), tournoie, rebondit sur les bords… puis il est sonné |
 | Cliquer pendant qu'il dort | réveil grognon (souvent il se rendort) |
 | Clic droit sur lui | même menu que l'icône |
 
@@ -31,11 +37,12 @@ Il remarque aussi : quand tu es inactif (> 3 min il s'ennuie, > 8 min il dort), 
 (il te dit bonjour), et quand la souris file à toute vitesse près de lui (sursaut ou cachette).
 
 ## Menu
-État et jauges · **Carnet** (lien, journée, dernières entrées, **ma collection**, carnet en ligne) · **La bande** (envoyer en visite au hasard
-ou chez quelqu'un, avec un petit mot, visites spontanées, accepter les petits mots, renommer, bloquer un visiteur, voir la
-bande en ligne, **voir la collection d'une autre tortue**) · **Jeux** (bowling, touffe d'herbe, propositions
-spontanées on/off) · réveiller / mettre au lit · l'appeler ici · taille (petit / moyen / grand, adaptée au zoom Windows) ·
-pause (le cacher) · lancer au démarrage de Windows · version · quitter.
+Un panneau pixel art façon jeu mobile (clic sur l'icône ou clic droit sur lui). **Accueil** : portrait animé, nom, étoiles
+du lien, jauges (affection, énergie, ventre) ; grosses tuiles **Bowling**, **Herbe**, **Visite**, **Collection** ; boutons
+dodo/réveil et « viens ici » ; en bas, petites icônes réglages, carnet, pause, quitter. **Visite** : au hasard, avec un
+petit mot, ou chez un membre de la bande (tête de son espèce, en ligne, voir sa collection), bloquer le visiteur, la bande en
+ligne. **Carnet** : lien, journée, dernières entrées, carnet en ligne. **Réglages** : démarrage auto, visites spontanées,
+petits mots, jeux spontanés, taille (P/M/G), renommer, quitter. Échap ou un clic ailleurs le ferme.
 
 ## Les fenêtres et tes applis
 Il grimpe sur le bord des fenêtres (et tombe si tu les secoues, réduis ou fermes), joue à cache-cache derrière (ses pixels
@@ -47,18 +54,19 @@ quand tu tapes longtemps. Détection 100 % locale : rien n'est envoyé, rien d'a
 Rares et discrets (désactivables dans Jeux). **Bowling** : elle installe 6 quilles, tu la lances dessus comme d'habitude
 (2 lancers par tour, strike possible). **Touffe d'herbe** : elle pousse en bas de l'écran ; un clic dessus peut ne rien
 donner, faire jaillir un objet ou faire sortir une petite bête (coccinelle, escargot, grenouille, papillon). Tout ce que tu
-trouves va dans la collection (16 cases, visible dans le menu et chez les autres tortues de la bande).
+trouves va dans la collection (16 cases, visible dans le menu et chez les autres compagnons de la bande).
 
 ## Le lien et le carnet
 Le lien se construit sur des semaines (câlins, temps passé ensemble, jeux, cadeaux, visites ; les lancers et les clics en
-rafale l'abîment ; une longue absence l'effrite un peu). Paliers : Nouvelle tortue → Copain → Ami → Meilleur ami →
+rafale l'abîment ; une longue absence l'effrite un peu). Paliers : Nouveau venu → Copain → Ami → Meilleur ami →
 Inséparable, qui débloquent : te suivre, dormir contre ta souris, t'apporter des cadeaux, fêter ton retour, être triste
 quand tu pars. Le journal note les moments marquants et un bilan quotidien.
 
 ## La bande
-Toutes les tortues téléchargées depuis /friend se connaissent (serveur `server/` sur le VPS). Inscription anonyme au
-premier lancement avec un nom tiré au sort. Visites spontanées (rares) ou à la demande : la tortue quitte vraiment ton
-écran, joue chez l'ami (reniflage, chat, goûter, sieste, danse) et rentre avec un souvenir. Carnets publics :
+Tous les compagnons téléchargés depuis /friend se connaissent (serveur `server/` sur le VPS). Inscription anonyme à
+l'éclosion avec un nom tiré au sort et l'espèce. Visites spontanées (rares) ou à la demande : le compagnon quitte vraiment
+ton écran, joue chez l'ami (reniflage, chat, goûter, sieste, danse) et rentre avec un souvenir ; un visiteur garde sa vraie
+forme. Carnets publics :
 `/friend/t/<id>`, liste : `/friend/bande`.
 
 ## Personnalité et jauges
@@ -77,17 +85,21 @@ Prérequis : SDK .NET 10 + Visual Studio avec la charge « Développement Deskto
 2. `.\build.ps1`
 3. `bash deploy-friend.sh` (page + images + exe + `version.json` vers `/var/www/friend` sur le VPS)
 
-Les tortues installées récupèrent la nouvelle version d'elles-mêmes (vérification au lancement puis toutes les 24 h).
+Les compagnons installés récupèrent la nouvelle version d'eux-mêmes (vérification au lancement puis toutes les 24 h).
+Déployer le serveur de la bande **avant** l'exe quand l'API change.
 Serveur de la bande : voir [server/summary.md](server/summary.md).
 
-Les images de la page se régénèrent avec `dotnet run -- --frames site/img`.
+Les images de la page se régénèrent avec `dotnet run -- --frames site/img` (tortue à la racine, autres espèces et
+œuf dans leurs sous-dossiers).
 
 ## Outils de dev
 ```
-dotnet run -- --sheet planche.png   # toutes les poses et expressions sur une image
+dotnet run -- --sheet planche.png herisson   # toutes les poses d'une espèce sur une image
+dotnet run -- --sheet-all planches             # une planche par espèce
 dotnet run -- --frames site/img     # sprites et souvenirs transparents pour le site
-dotnet run -- --simulate 3          # 3 h de vie simulée + une visite à deux simulée : comportements, anomalies
-dotnet run -- --preview preview    # carte de collection, touffe d'herbe et bowling simulé en PNG
+dotnet run -- --simulate 3 --species escargot --guest grenouille   # vie simulée + visite simulée entre deux espèces
+dotnet run -- --preview preview    # collection, herbe, bowling, menu, œuf, les 6 espèces en PNG
+dotnet run -- --egg auto            # œuf de test à l'écran (rien n'est sauvegardé ; sans « auto », à tapoter soi-même)
 dotnet run -- --windows             # fenêtres vues, perches, applis détectées (diagnostic)
 dotnet run -- --bandtest <id>       # une tortue de test rend visite à <id> (instance réelle) et attend son retour
 ```

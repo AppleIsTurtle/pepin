@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Pépin, compagnon de bureau</title>
-<meta name="description" content="Une petite tortue en pixel art qui vit sur ton bureau Windows. Paresseuse, gourmande, et parfois un peu chipie avec ta souris.">
+<meta name="description" content="Un petit compagnon en pixel art qui sort d'un œuf et vit sur ton bureau Windows : tortue, hérisson, grenouille, escargot, panda roux ou axolotl.">
 <link rel="icon" type="image/png" href="img/icone-256.png">
 <style>
   :root {
@@ -86,6 +86,15 @@
     border-radius: 999px; background: var(--bg); color: var(--ink); text-decoration: none; font-size: 15px; }
   .chip:hover { border-color: var(--green-dark); }
   .chip small { color: var(--muted); font-size: 12px; }
+  .chip img { width: 28px; height: 27px; margin: -6px -2px -6px -6px; }
+  .egg { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .egg img { width: 90px; height: 108px; flex: none; }
+  .egg p { margin: 0; flex: 1 1 260px; }
+  .species { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-top: 16px; }
+  .species figure { margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 4px 6px 10px; text-align: center; }
+  .species img { width: 100%; max-width: 140px; height: auto; margin: 0 auto -6px; aspect-ratio: 224 / 216; }
+  .species figcaption { font-size: 13px; color: var(--muted); line-height: 1.35; }
+  .species figcaption b { display: block; color: var(--ink); font-size: 15px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #b8b0a2; flex: none; }
   .dot.on { background: #4fa83a; box-shadow: 0 0 0 3px rgba(79,168,58,.18); }
   footer { margin-top: 56px; color: var(--muted); font-size: 13px; text-align: center; }
@@ -109,8 +118,8 @@
   </nav>
   <div class="hero">
     <h1>Pépin</h1>
-    <p class="lead">Une petite tortue en pixel art qui vit par-dessus tes fenêtres. Paresseuse, gourmande,
-      et de temps en temps un peu chipie avec ta souris.</p>
+    <p class="lead">Un petit compagnon en pixel art qui sort d'un œuf et vit par-dessus tes fenêtres. Paresseux,
+      gourmand, et de temps en temps un peu chipie avec ta souris.</p>
     <div class="stage" id="stage" aria-hidden="true">
       <img class="px" id="turtle" src="img/neutre.png" alt="">
     </div>
@@ -123,6 +132,26 @@
   </div>
 
   <section>
+    <h2>Qui va sortir de ton œuf ?</h2>
+    <div class="card">
+      <div class="egg">
+        <img class="px" src="img/oeuf/oeuf.png" alt="Un œuf crème à petites taches">
+        <p>Au premier lancement, un œuf tombe sur ton bureau. Tapote-le : il se fissure, encore, encore…
+          puis il éclot. Six compagnons possibles, chacun avec <b>une chance sur six</b>, et chacun avec ses petites manies.</p>
+      </div>
+      <div class="species">
+        <figure><img class="px" src="img/neutre.png" alt="La tortue" loading="lazy"><figcaption><b>Tortue</b>rentre dans sa carapace, voyage en toupie</figcaption></figure>
+        <figure><img class="px" src="img/herisson/neutre.png" alt="Le hérisson" loading="lazy"><figcaption><b>Hérisson</b>se roule en boule, renifle le sol</figcaption></figure>
+        <figure><img class="px" src="img/grenouille/neutre.png" alt="La grenouille" loading="lazy"><figcaption><b>Grenouille</b>avance par bonds, gobe des mouches</figcaption></figure>
+        <figure><img class="px" src="img/escargot/neutre.png" alt="L'escargot" loading="lazy"><figcaption><b>Escargot</b>tout doux, laisse une traînée brillante</figcaption></figure>
+        <figure><img class="px" src="img/panda-roux/neutre.png" alt="Le panda roux" loading="lazy"><figcaption><b>Panda roux</b>se dresse bras levés, adore se percher</figcaption></figure>
+        <figure><img class="px" src="img/axolotl/neutre.png" alt="L'axolotl" loading="lazy"><figcaption><b>Axolotl</b>flotte, ses branchies trahissent son humeur</figcaption></figure>
+      </div>
+      <p class="note">Si tu avais déjà une tortue, elle reste ta tortue, avec son nom, son lien et son carnet.</p>
+    </div>
+  </section>
+
+  <section>
     <h2>L'installer</h2>
     <div class="card">
       <ol class="steps">
@@ -130,43 +159,44 @@
         <li>Double-clique dessus. Windows va sûrement afficher <span class="ui">Windows a protégé votre ordinateur</span> :
           clique sur <span class="ui">Informations complémentaires</span> puis <span class="ui">Exécuter quand même</span>.
           C'est normal, l'appli n'est pas signée par un éditeur payant.</li>
-        <li>Pépin apparaît en bas à droite de ton écran. Il se relancera tout seul à chaque démarrage de Windows.</li>
+        <li>Un œuf tombe en bas à droite de ton écran : tapote-le jusqu'à ce qu'il éclose. Ton compagnon se relancera
+          tout seul à chaque démarrage de Windows.</li>
       </ol>
-      <p class="note">Son menu est dans l'icône en forme de tête de tortue, près de l'horloge (ou clic droit sur lui) :
-        taille, pause, démarrage automatique, l'appeler près de ta souris, quitter.</p>
+      <p class="note">Son menu s'ouvre d'un clic sur son icône près de l'horloge (ou clic droit sur lui) : bowling, touffe
+        d'herbe, visites, collection, et les réglages derrière la petite roue dentée.</p>
     </div>
   </section>
 
   <section>
     <h2>Sa vie</h2>
     <div class="gallery">
-      <figure><img class="px" src="img/grignote.png" alt="Pépin grignote une fraise" loading="lazy"><figcaption><b>Gourmand</b>salade, fraises…</figcaption></figure>
-      <figure><img class="px" src="img/dort.png" alt="Pépin dort avec une bulle au nez" loading="lazy"><figcaption><b>Siestes</b>surtout le soir</figcaption></figure>
-      <figure><img class="px" src="img/reve.png" alt="Pépin rêve d'une fraise" loading="lazy"><figcaption><b>Rêves</b>devine de quoi</figcaption></figure>
-      <figure><img class="px" src="img/calin.png" alt="Pépin rougit, entouré de cœurs" loading="lazy"><figcaption><b>Câlins</b>il adore</figcaption></figure>
-      <figure><img class="px" src="img/attaque.png" alt="Pépin bondit, bouche ouverte" loading="lazy"><figcaption><b>Chasse</b>ta souris, parfois</figcaption></figure>
-      <figure><img class="px" src="img/colere.png" alt="Pépin en colère, tête rouge" loading="lazy"><figcaption><b>Colère</b>si tu l'embêtes</figcaption></figure>
-      <figure><img class="px" src="img/carapace.png" alt="Pépin tournoie dans sa carapace" loading="lazy"><figcaption><b>Voyages</b>en carapace</figcaption></figure>
-      <figure><img class="px" src="img/sonne.png" alt="Pépin sonné, yeux en spirale" loading="lazy"><figcaption><b>Sonné</b>si tu le lances</figcaption></figure>
+      <figure><img class="px" src="img/grignote.png" alt="La tortue grignote une fraise" loading="lazy"><figcaption><b>Gourmand</b>salade, fraises…</figcaption></figure>
+      <figure><img class="px" src="img/herisson/dort.png" alt="Le hérisson dort avec une bulle au nez" loading="lazy"><figcaption><b>Siestes</b>surtout le soir</figcaption></figure>
+      <figure><img class="px" src="img/panda-roux/reve.png" alt="Le panda roux, enroulé dans sa queue, rêve d'une fraise" loading="lazy"><figcaption><b>Rêves</b>devine de quoi</figcaption></figure>
+      <figure><img class="px" src="img/axolotl/calin.png" alt="L'axolotl rougit, entouré de cœurs" loading="lazy"><figcaption><b>Câlins</b>il adore</figcaption></figure>
+      <figure><img class="px" src="img/grenouille/attaque.png" alt="La grenouille bondit, bouche ouverte" loading="lazy"><figcaption><b>Chasse</b>ta souris, parfois</figcaption></figure>
+      <figure><img class="px" src="img/escargot/colere.png" alt="L'escargot en colère, tête rouge" loading="lazy"><figcaption><b>Colère</b>si tu l'embêtes</figcaption></figure>
+      <figure><img class="px" src="img/herisson/carapace.png" alt="Le hérisson roule en boule" loading="lazy"><figcaption><b>Voyages</b>en boule, en bonds, en carapace</figcaption></figure>
+      <figure><img class="px" src="img/sonne.png" alt="La tortue sonnée, yeux en spirale" loading="lazy"><figcaption><b>Sonné</b>si tu le lances</figcaption></figure>
     </div>
   </section>
 
   <section id="bande">
     <h2>La bande</h2>
     <div class="card">
-      <p style="margin:0 0 10px">Toutes les tortues téléchargées ici se connaissent. De temps en temps, la tienne part en visite
-        chez un ami : elle disparaît de ton écran, joue avec l'autre tortue (chat, goûter, sieste, danse)
-        et revient avec un souvenir. Et parfois, c'est une tortue d'un ami qui débarque chez toi.</p>
-      <p style="margin:0">Depuis son menu (<span class="ui">La bande</span>), tu peux aussi l'envoyer chez quelqu'un,
-        lui confier un petit mot, le renommer ou lire son carnet. Chaque tortue a un nom tiré au sort et un carnet public,
+      <p style="margin:0 0 10px">Tous les compagnons téléchargés ici se connaissent. De temps en temps, le tien part en visite
+        chez un ami : il disparaît de ton écran, joue avec l'autre (chat, goûter, sieste, danse)
+        et revient avec un souvenir. Et parfois, c'est le compagnon d'un ami qui débarque chez toi, sous sa vraie forme.</p>
+      <p style="margin:0">Depuis son menu (tuile <span class="ui">Visite</span>), tu peux aussi l'envoyer chez quelqu'un,
+        lui confier un petit mot ou voir la collection des autres. Chaque compagnon a un nom tiré au sort et un carnet public,
         sans rien qui te relie à lui.</p>
       <div class="band-head">
         <b id="band-count">La bande en ce moment</b>
         <a href="/friend/bande" style="color:inherit;font-size:15px">Tous les carnets →</a>
       </div>
       <div class="chips" id="band-list"><span class="note" style="margin:0">Chargement de la bande…</span></div>
-      <p class="note">Clique sur une tortue pour lire son carnet. Le carnet de la tienne s'ouvre aussi depuis son menu :
-        <span class="ui">Carnet</span> → <span class="ui">Ouvrir son carnet en ligne</span>.</p>
+      <p class="note">Clique sur un compagnon pour lire son carnet. Le carnet du tien s'ouvre aussi depuis son menu :
+        petit carnet en bas → <span class="ui">Carnet en ligne</span>.</p>
     </div>
   </section>
 
@@ -189,7 +219,7 @@
         <tr><td>Un clic</td><td>Il sursaute.</td></tr>
         <tr><td>Plein de clics d'affilée</td><td>Il s'énerve… et peut mordre ta souris.</td></tr>
         <tr><td>Le glisser</td><td>Tu le prends dans tes mains, il gigote.</td></tr>
-        <tr><td>Le lancer</td><td>Il rentre dans sa carapace, rebondit sur les bords de l'écran et finit sonné.</td></tr>
+        <tr><td>Le lancer</td><td>Il se met en boule (ou dans sa carapace, sa coquille…), rebondit sur les bords de l'écran et finit sonné.</td></tr>
         <tr><td>Le réveiller</td><td>Grognon. Très grognon.</td></tr>
       </table>
       <p class="note">Il a de l'énergie, de la faim, de l'humeur et de l'affection qui évoluent avec le temps et se souviennent
@@ -200,7 +230,7 @@
   <section>
     <h2>Le désinstaller</h2>
     <div class="card">
-      Dans son menu, décoche <span class="ui">Lancer au démarrage de Windows</span>, puis <span class="ui">Quitter</span>.
+      Dans son menu, roue dentée : décoche <span class="ui">Démarrage auto</span>, puis <span class="ui">Quitter Pépin</span>.
       Supprime ensuite <b>Pepin.exe</b>, et si tu veux effacer sa mémoire, le dossier <kbd>%APPDATA%\Pepin</kbd>.
     </div>
   </section>
@@ -212,17 +242,19 @@
 </main>
 
 <script>
-// la bande en direct : chaque tortue mène à son carnet (noms insérés en texte, jamais en HTML)
+// la bande en direct : chaque compagnon mène à son carnet (noms insérés en texte, jamais en HTML)
 (() => {
   const list = document.getElementById('band-list'), count = document.getElementById('band-count');
-  const paliers = ['Nouvelle tortue', 'Copain', 'Ami', 'Meilleur ami', 'Inséparable'];
+  const paliers = ['Nouveau venu', 'Copain', 'Ami', 'Meilleur ami', 'Inséparable'];
+  const especes = ['tortue', 'herisson', 'grenouille', 'escargot', 'panda-roux', 'axolotl'];
+  const portrait = e => (!e || e === 'tortue' || !especes.includes(e)) ? 'img/neutre.png' : `img/${e}/neutre.png`;
   async function load() {
     try {
       const r = await fetch('/friend/api/public/band', { cache: 'no-store' });
       if (!r.ok) throw new Error(r.status);
       const d = await r.json();
       count.textContent = d.size === 0 ? "Personne pour l'instant"
-        : `${d.size} tortue${d.size > 1 ? 's' : ''}, ${d.online} en ligne`;
+        : `${d.size} compagnon${d.size > 1 ? 's' : ''}, ${d.online} en ligne`;
       list.replaceChildren();
       if (d.turtles.length === 0) {
         const p = document.createElement('span');
@@ -239,7 +271,9 @@
         dot.className = 'dot' + (t.online ? ' on' : '');
         const small = document.createElement('small');
         small.textContent = paliers[t.tier] || '';
-        a.append(dot, document.createTextNode(t.name), small);
+        const face = document.createElement('img');
+        face.className = 'px'; face.alt = ''; face.src = portrait(t.species);
+        a.append(dot, face, document.createTextNode(t.name), small);
         list.append(a);
       }
     } catch {
@@ -256,12 +290,16 @@
 
 (() => {
   const img = document.getElementById('turtle'), stage = document.getElementById('stage');
+  // un compagnon au hasard se promène en haut de la page
+  const especes = ['', 'herisson/', 'grenouille/', 'escargot/', 'panda-roux/', 'axolotl/'];
+  const dir0 = 'img/' + especes[Math.floor(Math.random() * especes.length)];
+  img.src = dir0 + 'neutre.png';
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const W = 224, frames = ['marche1', 'neutre', 'marche3', 'neutre'];
-  ['marche1', 'marche3', 'cligne', 'calin', 'neutre'].forEach(n => { new Image().src = 'img/' + n + '.png'; });
+  ['marche1', 'marche3', 'cligne', 'calin', 'neutre'].forEach(n => { new Image().src = dir0 + n + '.png'; });
   let x = 40, dir = 1, pauseUntil = 0, step = 0, hover = false, last = 0;
 
-  img.addEventListener('mouseenter', () => { hover = true; img.src = 'img/calin.png'; });
+  img.addEventListener('mouseenter', () => { hover = true; img.src = dir0 + 'calin.png'; });
   img.addEventListener('mouseleave', () => { hover = false; });
 
   function tick(t) {
@@ -271,13 +309,13 @@
     if (hover) return;
     const max = stage.clientWidth - W + 40;
     if (t < pauseUntil) {
-      img.src = 'img/' + (Math.random() < 0.08 ? 'cligne' : 'neutre') + '.png';
+      img.src = dir0 + (Math.random() < 0.08 ? 'cligne' : 'neutre') + '.png';
       return;
     }
     x += dir * 4;
     if (x > max) { x = max; dir = -1; }
     if (x < -40) { x = -40; dir = 1; }
-    img.src = 'img/' + frames[step++ % 4] + '.png';
+    img.src = dir0 + frames[step++ % 4] + '.png';
     img.style.left = x + 'px';
     img.style.transform = dir < 0 ? 'scaleX(-1)' : 'none';
     if (Math.random() < 0.012) pauseUntil = t + 1500 + Math.random() * 2500;

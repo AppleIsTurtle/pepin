@@ -3,7 +3,14 @@ namespace Pepin;
 /// <summary>Outil de dev : `Pepin.exe --sheet out.png` dessine toutes les poses sur une planche.</summary>
 public static class SheetRenderer
 {
-    public static void Render(string path)
+    /// <summary>`--sheet-all dossier` : une planche par espèce.</summary>
+    public static void RenderAll(string dir)
+    {
+        Directory.CreateDirectory(dir);
+        foreach (var s in SpeciesInfo.All) Render(Path.Combine(dir, SpeciesInfo.Code(s) + ".png"), s);
+    }
+
+    public static void Render(string path, Species species)
     {
         var poses = new List<Action<Visual>>
         {
@@ -39,25 +46,32 @@ public static class SheetRenderer
             v => { v.Eyes = Eyes.Normal; v.Mouth = Mouth.Smile; v.LegsTuck = 3; v.Eyes = Eyes.HalfLid; },
             v => { v.Eyes = Eyes.Closed; v.Mouth = Mouth.Smile; v.HeadOut = .6f; v.LegsTuck = 3; v.Add(FxKind.Hearts, .5f, 1); },
             v => { v.Eyes = Eyes.Happy; v.Mouth = Mouth.Tongue; v.ShadowZ = 3; v.Add(FxKind.Notes, .1f, 1); },
+            // v3 : poses propres aux espèces (ignorées par celles qui ne les dessinent pas)
+            v => { v.Puffed = true; v.Eyes = Eyes.Wide; v.Mouth = Mouth.Oh; v.Add(FxKind.Exclaim); },   // hérissé / gorge gonflée
+            v => { v.Stand = true; v.Eyes = Eyes.Wide; v.Mouth = Mouth.Oh; },                           // dressé bras levés
+            v => { v.InShell = true; v.SpinFrame = 3; v.Puffed = true; },
+            v => { v.LegsTuck = 3; v.Eyes = Eyes.Wide; v.Mouth = Mouth.Oh; v.Add(FxKind.ShellHat, 0, 0); }, // sort de l'œuf
+            v => { v.ShadowZ = 7; v.LegPhase = 2; v.Eyes = Eyes.Determined; },                           // en plein bond
+            v => { v.Eyes = Eyes.Normal; v.Mouth = Mouth.Tongue; v.Add(FxKind.Fly, .3f); v.Add(FxKind.Tongue, .5f, .8f); },
         };
 
         const int cols = 6, pad = 2;
         int rows = (poses.Count + cols - 1) / cols + 1;
-        var sheet = new PixelCanvas(cols * (TurtleArt.CW + pad), rows * (TurtleArt.CH + pad));
-        var one = new PixelCanvas(TurtleArt.CW, TurtleArt.CH);
+        var sheet = new PixelCanvas(cols * (SpeciesArt.CW + pad), rows * (SpeciesArt.CH + pad));
+        var one = new PixelCanvas(SpeciesArt.CW, SpeciesArt.CH);
         var vis = new Visual();
         for (int i = 0; i < poses.Count; i++)
         {
             vis.Reset(); vis.FacingRight = true;
             vis.Tint = 0; vis.TintAmount = 0; vis.DreamOf = Snack.Lettuce; vis.Food = Item.Salade;
             poses[i](vis);
-            TurtleArt.Draw(one, vis);
-            one.BlitTo(sheet, (i % cols) * (TurtleArt.CW + pad), (i / cols) * (TurtleArt.CH + pad));
+            SpeciesArt.Draw(one, vis, species);
+            one.BlitTo(sheet, (i % cols) * (SpeciesArt.CW + pad), (i / cols) * (SpeciesArt.CH + pad));
         }
         // icône en bas à droite
         var icon = new PixelCanvas(16, 16);
-        TurtleArt.DrawIcon(icon);
-        icon.BlitTo(sheet, (cols - 1) * (TurtleArt.CW + pad), (rows - 1) * (TurtleArt.CH + pad));
+        SpeciesArt.DrawIcon(icon, species);
+        icon.BlitTo(sheet, (cols - 1) * (SpeciesArt.CW + pad), (rows - 1) * (SpeciesArt.CH + pad));
         sheet.SavePng(path, 4, PixelCanvas.Rgb(236, 240, 245));
     }
 
@@ -81,18 +95,34 @@ public static class SheetRenderer
             ("attaque", v => { v.Eyes = Eyes.Determined; v.Mouth = Mouth.Bite; v.ShadowZ = 6; v.LegPhase = 1; }),
             ("carapace", v => { v.InShell = true; v.SpinFrame = 1; v.Add(FxKind.Speed, .3f); }),
         };
-        var one = new PixelCanvas(TurtleArt.CW, TurtleArt.CH);
+        var one = new PixelCanvas(SpeciesArt.CW, SpeciesArt.CH);
         var vis = new Visual();
-        foreach (var (name, set) in frames)
+        // la tortue à la racine (historique : liens et pages existants), les autres espèces dans leur dossier
+        foreach (var sp in SpeciesInfo.All)
         {
-            vis.Reset(); vis.FacingRight = true; vis.Tint = 0; vis.TintAmount = 0;
-            set(vis);
-            TurtleArt.Draw(one, vis);
-            one.SavePng(Path.Combine(dir, name + ".png"), 4, 0);
+            string sub = sp == Species.Tortue ? dir : Path.Combine(dir, SpeciesInfo.Code(sp));
+            Directory.CreateDirectory(sub);
+            foreach (var (name, set) in frames)
+            {
+                vis.Reset(); vis.FacingRight = true; vis.Tint = 0; vis.TintAmount = 0; vis.AnimFrame = 0;
+                set(vis);
+                SpeciesArt.Draw(one, vis, sp);
+                one.SavePng(Path.Combine(sub, name + ".png"), 4, 0);
+            }
+            var icon = new PixelCanvas(16, 16);
+            SpeciesArt.DrawIcon(icon, sp);
+            icon.SavePng(Path.Combine(sub, "icone-256.png"), 16, 0);
         }
-        var icon = new PixelCanvas(16, 16);
-        TurtleArt.DrawIcon(icon);
-        icon.SavePng(Path.Combine(dir, "icone-256.png"), 16, 0);
+
+        // l'œuf (page de téléchargement)
+        string eggDir = Path.Combine(dir, "oeuf");
+        Directory.CreateDirectory(eggDir);
+        var egg = new PixelCanvas(Egg.EW, Egg.EH);
+        for (int crack = 0; crack <= 4; crack += 2)
+        {
+            Egg.DrawShell(egg, crack);
+            egg.SavePng(Path.Combine(eggDir, crack == 0 ? "oeuf.png" : $"oeuf-{crack}.png"), 6, 0);
+        }
 
         // souvenirs et trouvailles (pages carnet du serveur) : 10×10 px logiques, ×6
         Directory.CreateDirectory(Path.Combine(dir, "items"));

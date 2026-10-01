@@ -6,13 +6,16 @@ namespace Pepin;
 /// </summary>
 public static class Simulator
 {
+    /// <summary>`--species x` / `--guest y` : espèces des tortues simulées (outils de dev).</summary>
+    public static Species Species = Species.Tortue, Guest = Species.Tortue;
+
     public static int Run(double hours)
     {
         var mood = new Mood { Energy = 0.8, Hunger = 0.3, Happiness = 0.7, Affection = 0.4 };
         var s = new Senses { Work = new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1040 }, CursorOnSameMonitor = true };
         var life = new Life(new LifeData { Bond = 200 });          // proche du palier « Ami » pour voir les débloqués
-        var pet = new Pet(mood, s) { Scale = 3, X = 1500, Y = 900, Life = life };
-        var canvas = new PixelCanvas(TurtleArt.CW, TurtleArt.CH);
+        var pet = new Pet(mood, s) { Scale = 3, X = 1500, Y = 900, Life = life, Species = Species };
+        var canvas = new PixelCanvas(SpeciesArt.CW, SpeciesArt.CH);
         var rnd = new Random(42);
         var counts = new SortedDictionary<string, int>();
         var time = new SortedDictionary<string, double>();
@@ -66,12 +69,12 @@ public static class Simulator
             s.IdleSeconds = t - lastInput;
 
             if (pet.Dragging) pet.DragFollow();
-            int wx = (int)Math.Round(pet.X) - TurtleArt.AX * 3, wy = (int)Math.Round(pet.Y - pet.Z) - TurtleArt.AY * 3;
+            int wx = (int)Math.Round(pet.X) - SpeciesArt.AX * 3, wy = (int)Math.Round(pet.Y - pet.Z) - SpeciesArt.AY * 3;
             pet.CursorOnMe = canvas.IsSolid((int)Math.Floor((s.CX - wx) / 3), (int)Math.Floor((s.CY - wy) / 3));
             try
             {
                 pet.Update(dt);
-                TurtleArt.Draw(canvas, pet.V);
+                SpeciesArt.Draw(canvas, pet.V, pet.Species);
             }
             catch (Exception e)
             {
@@ -134,8 +137,8 @@ public static class Simulator
         var work = new RECT { Left = 0, Top = 0, Right = 1920, Bottom = 1040 };
         var hs = new Senses { Work = work, CursorOnSameMonitor = true, CX = 200, CY = 200, IdleSeconds = 1 };
         var gs = new Senses { Work = work, CursorOnSameMonitor = true, CX = 200, CY = 200, IdleSeconds = 1 };
-        var host = new Pet(new Mood { Energy = 0.9, Happiness = 0.8 }, hs, new Idle()) { Scale = 3, X = 900, Y = 700 };
-        var guest = new Pet(new Mood { Energy = 0.9, Happiness = 0.8 }, gs, new Idle()) { Scale = 3, X = 900, Y = 700, IsGuest = true };
+        var host = new Pet(new Mood { Energy = 0.9, Happiness = 0.8 }, hs, new Idle()) { Scale = 3, X = 900, Y = 700, Species = Species };
+        var guest = new Pet(new Mood { Energy = 0.9, Happiness = 0.8 }, gs, new Idle()) { Scale = 3, X = 900, Y = 700, IsGuest = true, Species = Guest };
         host.Partner = guest; guest.Partner = host;
         host.Orchestrator = () => new WatchFriend();
         guest.Switch(new Arrive());

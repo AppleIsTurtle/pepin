@@ -8,6 +8,9 @@ public enum FxKind : byte
 {
     Zzz, Bubble, Hearts, Anger, Steam, Exclaim, Question, Notes, Sweat, Stars,
     Food, Crumbs, Dream, Grumble, Dust, Speed, Sparkles, Tear,
+    ShellHat,   // morceau de coquille sur la tête (éclosion) ; Value > 0 : il s'envole
+    Fly,        // mouche qui tourne autour de la tête (grenouille)
+    Tongue,     // langue tirée vers la mouche : Value = longueur 0..1
 }
 
 public enum Snack : byte { Lettuce, Strawberry, Heart }
@@ -33,6 +36,8 @@ public sealed class Visual
     public bool InShell;           // tête et pattes rentrées
     public int SpinFrame;          // 0..3 : rotation de la carapace
     public int ShadowZ;            // hauteur en pixels logiques (ombre décalée)
+    public bool Puffed;            // piquants hérissés (hérisson), gorge gonflée (grenouille)
+    public bool Stand;             // dressé sur les pattes arrière, bras levés (panda roux)
     public bool NoShadow;
 
     // --- visage ---
@@ -57,9 +62,20 @@ public sealed class Visual
     public void Reset()
     {
         HeadOut = 1; HeadDx = HeadDy = 0; LegPhase = 0; LegsTuck = 0; LegsDangle = false;
-        BodyDx = BodyDy = 0; InShell = false; SpinFrame = 0; ShadowZ = 0; NoShadow = false;
+        BodyDx = BodyDy = 0; InShell = false; SpinFrame = 0; ShadowZ = 0; NoShadow = false; Puffed = false; Stand = false;
         Eyes = Eyes.Normal; Mouth = Mouth.Smile; LookX = LookY = 0; Blink = false; Blush = false; Flush = 0;
         FxCount = 0;
+    }
+
+    /// <summary>Copie complète (portrait du menu, sans toucher à l'image de l'animal).</summary>
+    public void CopyTo(Visual o)
+    {
+        o.FacingRight = FacingRight; o.HeadOut = HeadOut; o.HeadDx = HeadDx; o.HeadDy = HeadDy; o.LegPhase = LegPhase;
+        o.LegsTuck = LegsTuck; o.LegsDangle = LegsDangle; o.BodyDx = BodyDx; o.BodyDy = BodyDy; o.InShell = InShell;
+        o.SpinFrame = SpinFrame; o.Puffed = Puffed; o.Stand = Stand; o.ShadowZ = ShadowZ; o.NoShadow = NoShadow; o.Eyes = Eyes; o.Mouth = Mouth;
+        o.LookX = LookX; o.LookY = LookY; o.Blink = Blink; o.Blush = Blush; o.AnimFrame = AnimFrame; o.Tint = Tint;
+        o.TintAmount = TintAmount; o.Flush = Flush; o.Food = Food; o.DreamOf = DreamOf; o.FxCount = FxCount;
+        Array.Copy(Fx, o.Fx, Fx.Length);
     }
 
     public void Add(FxKind kind, float phase = 0, float value = 1)

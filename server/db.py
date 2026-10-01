@@ -83,8 +83,17 @@ def init() -> None:
     try:
         c.execute("PRAGMA journal_mode = WAL")
         c.executescript(SCHEMA)
+        migrer(c)
     finally:
         c.close()
+
+
+def migrer(c: sqlite3.Connection) -> None:
+    """Ajouts de colonnes des versions suivantes (sans effet si déjà faits)."""
+    colonnes = {r[1] for r in c.execute("PRAGMA table_info(turtles)")}
+    if "species" not in colonnes:
+        # v3 : l'espèce du compagnon ; tous les comptes existants sont des tortues
+        c.execute("ALTER TABLE turtles ADD COLUMN species TEXT NOT NULL DEFAULT 'tortue'")
 
 
 @contextmanager

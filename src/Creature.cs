@@ -14,8 +14,8 @@ public sealed unsafe class Creature
     public int Scale { get; private set; } = 3;
     public bool Hidden { get; private set; }
 
-    readonly PixelCanvas canvas = new(TurtleArt.CW, TurtleArt.CH);
-    readonly uint[] shown = new uint[TurtleArt.CW * TurtleArt.CH];
+    readonly PixelCanvas canvas = new(SpeciesArt.CW, SpeciesArt.CH);
+    readonly uint[] shown = new uint[SpeciesArt.CW * SpeciesArt.CH];
     nint memDc, dib, oldBmp;
     uint* bits;
     int bmpW, bmpH;
@@ -84,8 +84,8 @@ public sealed unsafe class Creature
         Scale = s;
         Pet.Scale = s;
         if (dib != 0) { SelectObject(memDc, oldBmp); DeleteObject(dib); }
-        bmpW = TurtleArt.CW * s;
-        bmpH = TurtleArt.CH * s;
+        bmpW = SpeciesArt.CW * s;
+        bmpH = SpeciesArt.CH * s;
         var bi = new BITMAPINFOHEADER { biSize = (uint)sizeof(BITMAPINFOHEADER), biWidth = bmpW, biHeight = -bmpH, biPlanes = 1, biBitCount = 32 };
         void* b;
         dib = CreateDIBSection(memDc, &bi, 0, &b, 0, 0);
@@ -96,12 +96,12 @@ public sealed unsafe class Creature
 
     public void Render()
     {
-        TurtleArt.Draw(canvas, Pet.V);
+        SpeciesArt.Draw(canvas, Pet.V, Pet.Species);
         // hors drag, la fenêtre avance par pixels logiques entiers : plus "pixel art" et bien moins de mises à jour
         double gx = Pet.X, gy = Pet.Y - Pet.Z;
         if (!Pet.Dragging) { gx = Math.Round(gx / Scale) * Scale; gy = Math.Round(gy / Scale) * Scale; }
-        int nx = (int)Math.Round(gx) - TurtleArt.AX * Scale;
-        int ny = (int)Math.Round(gy) - TurtleArt.AY * Scale;
+        int nx = (int)Math.Round(gx) - SpeciesArt.AX * Scale;
+        int ny = (int)Math.Round(gy) - SpeciesArt.AY * Scale;
         if (Pet.Occluder is RECT occ) Occlude(occ, nx, ny);
 
         if (!hasShown || !canvas.Px.AsSpan().SequenceEqual(shown))
@@ -126,11 +126,11 @@ public sealed unsafe class Creature
     /// <summary>« Derrière une fenêtre » : on gomme les pixels dont le centre tombe dans son rectangle.</summary>
     void Occlude(RECT r, int nx, int ny)
     {
-        for (int y = 0; y < TurtleArt.CH; y++)
+        for (int y = 0; y < SpeciesArt.CH; y++)
         {
             int sy = ny + y * Scale + Scale / 2;
             if (sy < r.Top || sy >= r.Bottom) continue;
-            for (int x = 0; x < TurtleArt.CW; x++)
+            for (int x = 0; x < SpeciesArt.CW; x++)
             {
                 int sx = nx + x * Scale + Scale / 2;
                 if (sx >= r.Left && sx < r.Right) canvas.Set(x, y, 0, Layer.None);
@@ -142,12 +142,12 @@ public sealed unsafe class Creature
     {
         uint* dst = bits;
         var px = canvas.Px;
-        for (int y = 0; y < TurtleArt.CH; y++)
+        for (int y = 0; y < SpeciesArt.CH; y++)
         {
             uint* row = dst;
-            for (int x = 0; x < TurtleArt.CW; x++)
+            for (int x = 0; x < SpeciesArt.CW; x++)
             {
-                uint c = px[y * TurtleArt.CW + x];
+                uint c = px[y * SpeciesArt.CW + x];
                 for (int k = 0; k < Scale; k++) *dst++ = c;
             }
             for (int r = 1; r < Scale; r++)

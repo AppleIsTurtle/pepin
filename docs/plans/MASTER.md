@@ -35,6 +35,10 @@ notification (état, réveiller/endormir, appeler, taille, pause, démarrage aut
 - la bande : toutes les tortues téléchargées se connaissent via un serveur sur le VPS ; visites
   spontanées ou à la demande, jeux à deux, souvenirs, petits mots ; carnets publics en ligne
 
+**Ajout 2026-10-01 (v3)** — voir [features/especes-menu/plan.md](features/especes-menu/plan.md) : menu en panneau
+pixel art façon jeu mobile, 6 espèces (tortue, hérisson, grenouille, escargot, panda roux, axolotl) tirées à 1/6,
+œuf à faire éclore à la première installation (les tortues existantes restent des tortues), bande multi-espèces.
+
 **Dehors** : sons, nourrir manuellement, installeur, masquage automatique en plein écran
 (demande explicite : toujours par-dessus tout), couleur/accessoires personnalisés, codes d'amis
 (choix « une seule bande »).
@@ -47,6 +51,7 @@ notification (état, réveiller/endormir, appeler, taille, pause, démarrage aut
 | Personnalité qui évolue | [features/evolution/plan.md](features/evolution/plan.md) | done |
 | La bande | [features/bande/plan.md](features/bande/plan.md) | done |
 | Mini-jeux, évènements, réseau enrichi | [features/jeux/plan.md](features/jeux/plan.md) | code écrit, à essayer en vrai |
+| Espèces, œuf et menu de jeu (v3) | [features/especes-menu/plan.md](features/especes-menu/plan.md) | publiée (3.0.0, 2026-10-01) ; menu et œuf à essayer en vrai |
 
 ## Chunks
 | # | Fichier | Statut |

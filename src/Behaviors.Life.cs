@@ -22,6 +22,37 @@ sealed class LevelUp : Behavior
     }
 }
 
+/// <summary>Vient de sortir de l'œuf : surpris, secoue le bout de coquille, regarde autour, saute de joie.</summary>
+sealed class Hatched : Behavior
+{
+    public override int Fps => 24;
+    public override bool TrackEyes => false;
+    public override bool Interruptible => T > 4.6;
+    public override string Label => "vient d'éclore";
+    public override void Tick(Pet p, double dt)
+    {
+        var v = p.V;
+        v.LegsTuck = T < 1.2 ? 3 : 0;
+        if (T < 0.6) { v.Eyes = Eyes.Wide; v.Mouth = Mouth.Oh; v.Add(FxKind.ShellHat, 0, 0); }
+        else if (T < 1.6)
+        {
+            v.Eyes = Eyes.Squint; v.Mouth = Mouth.Zigzag;
+            v.HeadDx = (int)(T * 14) % 2 == 0 ? -1 : 1;
+            v.Add(FxKind.ShellHat, 0, 0);
+        }
+        else if (T < 2.2) { v.Eyes = Eyes.Normal; v.Mouth = Mouth.Oh; v.Add(FxKind.ShellHat, 0, (float)((T - 1.6) / 0.6)); }
+        else if (T < 3.4) { v.Eyes = Eyes.Normal; v.Mouth = Mouth.Smile; v.LookX = (int)(T * 1.7) % 2 == 0 ? -1 : 1; }
+        else
+        {
+            if (T - dt < 3.4) p.Say("Coucou !", 3);
+            v.Eyes = Eyes.Happy; v.Mouth = Mouth.Grin; v.Blush = true;
+            v.Add(FxKind.Sparkles, (float)(T * 0.8));
+            Hop(p, (T - 3.4) % 0.5, 0.5, 5);
+        }
+        if (T > 4.6) { p.Z = 0; Done = true; }
+    }
+}
+
 /// <summary>Palier 1+ : te suit un moment, sans coller.</summary>
 sealed class FollowYou : Behavior
 {

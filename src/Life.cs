@@ -68,6 +68,8 @@ public sealed class LifeData
     public Dictionary<string, int> Collection { get; set; } = [];
     public List<JournalEntry> Journal { get; set; } = [];
     public long BornUnix { get; set; }
+    public string? Species { get; set; }                   // code d'espèce ; absent = tortue (états d'avant la v3)
+    public bool Egg { get; set; }                          // pas encore éclos (première installation)
 
     // la bande
     public string? BandId { get; set; }
@@ -83,7 +85,7 @@ public sealed class LifeData
 public sealed class Life
 {
     public static readonly double[] TierAt = [0, 60, 250, 700, 1500];
-    public static readonly string[] TierNames = ["Nouvelle tortue", "Copain", "Ami", "Meilleur ami", "Inséparable"];
+    public static readonly string[] TierNames = ["Nouveau venu", "Copain", "Ami", "Meilleur ami", "Inséparable"];
 
     public readonly LifeData D;
     public int Tier => D.Tier;
@@ -93,7 +95,7 @@ public sealed class Life
     public Life(LifeData d)
     {
         D = d;
-        if (D.BornUnix == 0)
+        if (D.BornUnix == 0 && !D.Egg)
         {
             D.BornUnix = Now;
             Write("A débarqué sur ton bureau.");
@@ -102,6 +104,16 @@ public sealed class Life
     }
 
     static long Now => DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+    /// <summary>L'œuf vient d'éclore : l'espèce est fixée pour toujours.</summary>
+    public void Hatch(Species s)
+    {
+        D.Egg = false;
+        D.Species = SpeciesInfo.Code(s);
+        D.BornUnix = Now;
+        Write("Est sorti de son œuf.");
+        Dirty = true;
+    }
 
     /// <summary>À appeler au chargement : l'absence effrite un peu le lien.</summary>
     public void CatchUp(double hoursAway)

@@ -60,6 +60,21 @@ public static class PixelFont
         G('?', ".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#..");
         G('×', ".....", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", ".....");
         G(' ', "...", "...", "...", "...", "...", "...", "...");
+        G('(', ".#", "#.", "#.", "#.", "#.", "#.", ".#");
+        G(')', "#.", ".#", ".#", ".#", ".#", ".#", "#.");
+        G('+', ".....", ".....", "..#..", ".###.", "..#..", ".....", ".....");
+        G('%', "##..#", "##.#.", "...#.", "..#..", ".#...", ".#.##", "#..##");
+        G('&', ".##..", "#..#.", ".##..", ".#...", "#.#.#", "#..#.", ".##.#");
+        G('"', "#.#", "#.#", "...", "...", "...", "...", "...");
+        G('…', ".....", ".....", ".....", ".....", ".....", ".....", "#.#.#");
+        G('«', "......", "......", "..#..#", ".#..#.", "..#..#", "......", "......");
+        G('»', "......", "......", "#..#..", ".#..#.", "#..#..", "......", "......");
+        G('·', ".", ".", ".", "#", ".", ".", ".");
+        G('_', ".....", ".....", ".....", ".....", ".....", ".....", "#####");
+        G('#', ".#.#.", "#####", ".#.#.", ".#.#.", "#####", ".#.#.", ".....");
+        G('=', "...", "...", "###", "...", "###", "...", "...");
+        G('>', "#..", ".#.", "..#", ".#.", "#..", "...", "...");
+        G('<', "..#", ".#.", "#..", ".#.", "..#", "...", "...");
         return g;
     }
 
@@ -112,6 +127,31 @@ public static class PixelFont
             x += w + 1;
         }
         return x - x0 - 1;
+    }
+
+    /// <summary>Coupe `text` en lignes d'au plus `maxWidth` pixels (aux espaces ; un mot trop long est tronqué).</summary>
+    public static List<string> Wrap(string text, int maxWidth)
+    {
+        var lines = new List<string>();
+        string cur = "";
+        foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string w = word;
+            while (Measure(w) > maxWidth && w.Length > 1) w = w[..^1];
+            string tryLine = cur.Length == 0 ? w : cur + " " + w;
+            if (Measure(tryLine) <= maxWidth) cur = tryLine;
+            else { lines.Add(cur); cur = w; }
+        }
+        if (cur.Length > 0) lines.Add(cur);
+        return lines;
+    }
+
+    /// <summary>Raccourcit `text` avec « … » pour tenir dans `maxWidth` pixels.</summary>
+    public static string Fit(string text, int maxWidth)
+    {
+        if (Measure(text) <= maxWidth) return text;
+        while (text.Length > 1 && Measure(text + "…") > maxWidth) text = text[..^1];
+        return text.TrimEnd() + "…";
     }
 
     /// <summary>Texte centré sur `cx`.</summary>

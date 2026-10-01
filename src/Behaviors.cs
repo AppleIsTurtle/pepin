@@ -229,15 +229,27 @@ sealed class Travel : Behavior
     public override int Fps => 30;
     public override bool TrackEyes => false;
     public override bool Interruptible => false;
-    public override string Label => "voyage en carapace";
+    public override string Label => mode switch
+    {
+        TravelMode.Roll => "roule en boule",
+        TravelMode.Glide => "glisse dans sa coquille",
+        TravelMode.Hop => "fait de grands bonds",
+        TravelMode.Swim => "nage dans les airs",
+        _ => "voyage en carapace",
+    };
+    TravelMode mode;
+    double hopT;
     public override void OnStartle(Pet p) { }
     public override void Start(Pet p)
     {
         (tx, ty) = forcedX is double fx && forcedY is double fy ? p.ClampPoint(fx, fy) : p.RandomPointNear(120, 380);
+        mode = p.Traits.Travel;
     }
     public override void Tick(Pet p, double dt)
     {
         var v = p.V;
+        if (mode == TravelMode.Hop) { Hops(p, dt); return; }
+        if (mode == TravelMode.Swim) { Swim(p, dt); return; }
         const double retract = 0.35;
         if (T < retract)
         {
@@ -272,6 +284,51 @@ sealed class Travel : Behavior
         }
         else if (t < 1.3) { v.Eyes = Eyes.Happy; v.Mouth = Mouth.Grin; }
         else Done = true;
+    }
+
+    /// <summary>Grenouille : une suite de grands bonds jusqu'au but.</summary>
+    void Hops(Pet p, double dt)
+    {
+        var v = p.V;
+        const double air = 0.42, ground = 0.14;
+        double dx = tx - p.X, dy = ty - p.Y, d = Math.Sqrt(dx * dx + dy * dy);
+        if (Math.Abs(dx) > 2) v.FacingRight = dx > 0;
+        v.Eyes = Eyes.Determined; v.Mouth = Mouth.Smile;
+        if (arrivedAt >= 0)
+        {
+            v.Eyes = Eyes.Happy; v.Mouth = Mouth.Grin; v.LegsTuck = T - arrivedAt < 0.2 ? 2 : 0;
+            if (T - arrivedAt > 0.8) Done = true;
+            return;
+        }
+        hopT += dt;
+        double cyc = hopT % (air + ground);
+        if (cyc < air)
+        {
+            double step = 70 * p.Scale * dt;
+            p.Z = Math.Sin(cyc / air * Math.PI) * 10 * p.Scale;
+            v.LegPhase = 2;
+            if (d <= step || T > 14) { p.X = tx; p.Y = ty; p.Z = 0; arrivedAt = T; }
+            else { p.X += dx / d * step; p.Y += dy / d * step; }
+        }
+        else { p.Z = 0; v.LegsTuck = 2; if (cyc - air < dt) v.Add(FxKind.Dust, 0.2f); }
+    }
+
+    /// <summary>Axolotl : il « nage » vite dans l'air en ondulant, avec des bulles.</summary>
+    void Swim(Pet p, double dt)
+    {
+        var v = p.V;
+        double dx = tx - p.X, dy = ty - p.Y, d = Math.Sqrt(dx * dx + dy * dy);
+        if (Math.Abs(dx) > 2) v.FacingRight = dx > 0;
+        v.Eyes = Eyes.Happy; v.Mouth = Mouth.Smile;
+        if (arrivedAt >= 0) { if (T - arrivedAt > 0.6) Done = true; return; }
+        double speed = Math.Min(110, d / p.Scale * 2.5 + 25);
+        double step = speed * p.Scale * dt;
+        if (d <= step || T > 12) { p.X = tx; p.Y = ty; arrivedAt = T; }
+        else { p.X += dx / d * step; p.Y += dy / d * step; }
+        v.LegPhase = (int)(T * 10) & 3;
+        v.BodyDy = (int)Math.Round(Math.Sin(T * 9) * 1.2);
+        v.Add(FxKind.Bubble, (float)(T % 1), (float)(T * 1.3 % 1));
+        if (speed > 60) v.Add(FxKind.Speed, (float)(T * 3));
     }
 }
 

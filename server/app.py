@@ -23,7 +23,7 @@ from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 import catalogue
 import db
 import pages
-from catalogue import ACTIVITES, COLLECTION, SOUVENIRS
+from catalogue import ACTIVITES, COLLECTION, ESPECES, SOUVENIRS
 
 EN_LIGNE = 150            # s : au-delà, une tortue est hors ligne
 ATTENTE_MAX = 150         # s : une visite 'pending' plus vieille → personne à la maison
@@ -246,6 +246,12 @@ def _souvenir(v: str) -> str:
     return v
 
 
+def _espece(v: str) -> str:
+    if v not in ESPECES:
+        raise ValueError("espèce inconnue")
+    return v
+
+
 def _activite(v: str) -> str:
     if v not in ACTIVITES:
         raise ValueError("activité inconnue")
@@ -256,12 +262,14 @@ IdTortue = Annotated[str, StringConstraints(pattern=r"^[a-z0-9]{8}$")]
 Version = Annotated[str, StringConstraints(max_length=32)]
 Souvenir = Annotated[str, AfterValidator(_souvenir)]
 Activite = Annotated[str, AfterValidator(_activite)]
+Espece = Annotated[str, AfterValidator(_espece)]
 CleStat = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,24}$")]
 Compteur = Annotated[int, Field(ge=0, le=10**12)]
 
 
 class Inscription(BaseModel):
     version: Version
+    species: Optional[Espece] = None          # absent (clients 2.x) = tortue
 
 
 class Battement(BaseModel):
@@ -270,6 +278,7 @@ class Battement(BaseModel):
     tier: int = Field(ge=0, le=4)
     accept_messages: bool
     ack: list[int] = Field(default_factory=list, max_length=500)
+    species: Optional[Espece] = None          # absent (clients 2.x) = on ne change rien
 
 
 class DemandeVisite(BaseModel):
@@ -339,9 +348,10 @@ def register(body: Inscription, request: Request):
                 if nom.casefold() not in pris:
                     break
         c.execute(
-            "INSERT INTO turtles (id, token_hash, name, name_key, created, last_seen, version) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (tid, hashlib.sha256(jeton.encode()).hexdigest(), nom, nom.casefold(), t, t, body.version),
+            "INSERT INTO turtles (id, token_hash, name, name_key, created, last_seen, version, species) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (tid, hashlib.sha256(jeton.encode()).hexdigest(), nom, nom.casefold(), t, t, body.version,
+             body.species or "tortue"),
         )
     return {"id": tid, "token": jeton, "name": nom}
 
@@ -355,8 +365,9 @@ def heartbeat(body: Battement, moi: Moi):
         _dernier_hb[moi] = t
     with db.tx() as c:
         c.execute(
-            "UPDATE turtles SET version = ?, status = ?, tier = ?, accept_messages = ? WHERE id = ?",
-            (body.version, body.status, body.tier, int(body.accept_messages), moi),
+            "UPDATE turtles SET version = ?, status = ?, tier = ?, accept_messages = ?, "
+            "species = COALESCE(?, species) WHERE id = ?",
+            (body.version, body.status, body.tier, int(body.accept_messages), body.species, moi),
         )
         c.executemany(
             "UPDATE events SET acked = 1 WHERE eid = ? AND turtle_id = ?",
@@ -393,7 +404,7 @@ def visit(body: DemandeVisite, moi: Moi):
 
         eligibles = c.execute(
             """
-            SELECT t.id, t.name, t.accept_messages, COALESCE(f.points, 0) AS points
+            SELECT t.id, t.name, t.species, t.accept_messages, COALESCE(f.points, 0) AS points
             FROM turtles t
             LEFT JOIN friendships f ON f.a = MIN(t.id, :moi) AND f.b = MAX(t.id, :moi)
             WHERE t.id != :moi
@@ -418,18 +429,18 @@ def visit(body: DemandeVisite, moi: Moi):
             "VALUES (?, ?, ?, 'pending', ?, ?)",
             (moi, hote["id"], message, t, duree),
         ).lastrowid
-        visiteur = c.execute("SELECT name, tier FROM turtles WHERE id = ?", (moi,)).fetchone()
+        visiteur = c.execute("SELECT name, tier, species FROM turtles WHERE id = ?", (moi,)).fetchone()
         evenement(c, hote["id"], {
             "type": "visitor",
             "visit": {
                 "id": vid,
-                "from": {"id": moi, "name": visiteur["name"], "tier": visiteur["tier"]},
+                "from": {"id": moi, "name": visiteur["name"], "tier": visiteur["tier"], "species": visiteur["species"]},
                 "message": message,
                 "duration": duree,
             },
         }, t)
         c.execute("UPDATE turtles SET status = 'visiting' WHERE id = ?", (moi,))
-    return {"visit": {"id": vid, "host": {"id": hote["id"], "name": hote["name"]}, "duration": duree}}
+    return {"visit": {"id": vid, "host": {"id": hote["id"], "name": hote["name"], "species": hote["species"]}, "duration": duree}}
 
 
 @app.post("/api/visit/{vid}/accept")
@@ -483,7 +494,7 @@ def band(moi: Moi):
     with db.lecture() as c:
         rows = c.execute(
             """
-            SELECT t.id, t.name, t.tier, t.status, t.last_seen, COALESCE(f.points, 0) AS points,
+            SELECT t.id, t.name, t.tier, t.species, t.status, t.last_seen, COALESCE(f.points, 0) AS points,
                    EXISTS (SELECT 1 FROM blocks b WHERE b.blocker = :moi AND b.blocked = t.id) AS bloque
             FROM turtles t
             LEFT JOIN friendships f ON f.a = MIN(t.id, :moi) AND f.b = MAX(t.id, :moi)
@@ -496,6 +507,7 @@ def band(moi: Moi):
         "id": r["id"],
         "name": r["name"],
         "tier": r["tier"],
+        "species": r["species"],
         "online": r["last_seen"] >= t - EN_LIGNE,
         "status": r["status"],
         "friendship": r["points"],
@@ -510,7 +522,7 @@ def tortue(tid: str, moi: Moi):
         raise ApiError(404, "introuvable")
     t = now()
     with db.lecture() as c:
-        r = c.execute("SELECT id, name, tier, last_seen, carnet_json FROM turtles WHERE id = ?", (tid,)).fetchone()
+        r = c.execute("SELECT id, name, tier, species, last_seen, carnet_json FROM turtles WHERE id = ?", (tid,)).fetchone()
         if r is None or c.execute(
             "SELECT 1 FROM blocks WHERE (blocker = ? AND blocked = ?) OR (blocker = ? AND blocked = ?)",
             (moi, tid, tid, moi),
@@ -522,6 +534,7 @@ def tortue(tid: str, moi: Moi):
         "id": r["id"],
         "name": r["name"],
         "tier": r["tier"],
+        "species": r["species"],
         "online": r["last_seen"] >= t - EN_LIGNE,
         "friendship": amis,
         "collection": {k: n for k, n in (carnet_json.get("collection") or {}).items() if k in COLLECTION},
@@ -606,11 +619,11 @@ def bande_publique():
     t = now()
     with db.lecture() as c:
         rows = c.execute(
-            "SELECT id, name, tier, last_seen FROM turtles WHERE last_seen >= ?", (t - TRENTE_JOURS,)
+            "SELECT id, name, tier, species, last_seen FROM turtles WHERE last_seen >= ?", (t - TRENTE_JOURS,)
         ).fetchall()
     rows = sorted(rows, key=lambda r: (r["last_seen"] < t - EN_LIGNE, pages.cle_tri(r["name"])))
     tortues = [
-        {"id": r["id"], "name": r["name"], "tier": r["tier"], "online": r["last_seen"] >= t - EN_LIGNE}
+        {"id": r["id"], "name": r["name"], "tier": r["tier"], "species": r["species"], "online": r["last_seen"] >= t - EN_LIGNE}
         for r in rows[:200]
     ]
     return JSONResponse(

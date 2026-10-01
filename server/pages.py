@@ -14,7 +14,7 @@ from html import escape as e
 from fastapi.responses import HTMLResponse
 
 import db
-from catalogue import ACTIVITES, COLLECTION, PALIERS, SOUVENIRS, STATS
+from catalogue import ACTIVITES, COLLECTION, ESPECES, PALIERS, SOUVENIRS, STATS
 
 EN_LIGNE = 150
 TRENTE_JOURS = 30 * 86400
@@ -76,6 +76,8 @@ CSS = """
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--line);
          border: 1px solid var(--muted); flex: none; align-self: center; }
   .dot.on { background: var(--green); border-color: var(--green-dark); }
+  img.mini { width: 28px; height: 27px; flex: none; align-self: center; }
+  img.portrait { width: 112px; height: 108px; margin: 0 0 4px -8px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
   footer { margin-top: 56px; color: var(--muted); font-size: 13px; text-align: center; }
@@ -160,6 +162,17 @@ def _pastille(en_ligne: bool) -> str:
     return f'<span class="dot{" on" if en_ligne else ""}" title="{etat}"></span><span class="sr">{etat}</span>'
 
 
+def sprite(espece: str | None) -> str:
+    """Image du compagnon : la tortue à la racine (historique), les autres dans leur dossier."""
+    if not espece or espece == "tortue" or espece not in ESPECES:
+        return "/friend/img/neutre.png"
+    return f"/friend/img/{espece}/neutre.png"
+
+
+def _mini(espece: str | None) -> str:
+    return f'<img class="px mini" src="{sprite(espece)}" alt="" width="28" height="27">'
+
+
 def _lien(tid: str, nom: str) -> str:
     return f'<a href="/friend/t/{e(tid)}">{e(nom)}</a>'
 
@@ -201,11 +214,11 @@ def _vide(texte: str) -> str:
 
 def introuvable() -> HTMLResponse:
     corps = """<div class="hero">
-<h1>Tortue introuvable</h1>
-<p class="sous">Cette tortue n'existe pas, ou plus.</p>
+<h1>Compagnon introuvable</h1>
+<p class="sous">Ce compagnon n'existe pas, ou plus.</p>
 </div>
 <section><p><a href="/friend/bande">Voir la bande</a> · <a href="/friend/">Retour à Pépin</a></p></section>"""
-    return document("Tortue introuvable", corps, 404)
+    return document("Compagnon introuvable", corps, 404)
 
 
 # --- carnet d'une tortue ---
@@ -244,9 +257,12 @@ def carnet(tid: str, t: int) -> HTMLResponse:
 
     en_ligne = tortue["last_seen"] >= t - EN_LIGNE
     presence = "En ligne" if en_ligne else f"Vue {il_y_a(t - tortue['last_seen'])}"
+    espece = tortue["species"] if "species" in tortue.keys() else "tortue"
+    nom_espece = ESPECES.get(espece, "une tortue")
     blocs = [f"""<div class="hero">
+<img class="px portrait" src="{sprite(espece)}" alt="{e(nom_espece)}" width="112" height="108">
 <h1>{e(tortue["name"])}</h1>
-<p class="sous">{_pastille(en_ligne)}<span>{e(_palier(tortue["tier"]))} · {presence}</span></p>
+<p class="sous">{_pastille(en_ligne)}<span>{e(nom_espece[:1].upper() + nom_espece[1:])} · {e(_palier(tortue["tier"]))} · {presence}</span></p>
 </div>"""]
 
     # Statistiques : clés connues dans l'ordre prévu, puis les autres telles quelles.
@@ -313,7 +329,7 @@ def carnet(tid: str, t: int) -> HTMLResponse:
     else:
         blocs.append(_section("Journal", _vide("Le journal est encore vide.")))
 
-    return document(f"{tortue['name']} · carnet de tortue", "\n".join(blocs))
+    return document(f"{tortue['name']} · carnet de Pépin", "\n".join(blocs))
 
 
 # --- la bande ---
@@ -321,14 +337,14 @@ def carnet(tid: str, t: int) -> HTMLResponse:
 def bande(t: int) -> HTMLResponse:
     with db.lecture() as c:
         rows = c.execute(
-            "SELECT id, name, tier, last_seen FROM turtles WHERE last_seen >= ?", (t - TRENTE_JOURS,)
+            "SELECT id, name, tier, species, last_seen FROM turtles WHERE last_seen >= ?", (t - TRENTE_JOURS,)
         ).fetchall()
     rows = sorted(rows, key=lambda r: (r["last_seen"] < t - EN_LIGNE, cle_tri(r["name"])))
     en_ligne = sum(1 for r in rows if r["last_seen"] >= t - EN_LIGNE)
 
     if rows:
         items = "".join(
-            f'<li>{_pastille(r["last_seen"] >= t - EN_LIGNE)}{_lien(r["id"], r["name"])}'
+            f'<li>{_pastille(r["last_seen"] >= t - EN_LIGNE)}{_mini(r["species"])}{_lien(r["id"], r["name"])}'
             f'<span class="quand">{e(_palier(r["tier"]))}</span></li>'
             for r in rows[:200]
         )
@@ -338,7 +354,7 @@ def bande(t: int) -> HTMLResponse:
 
     corps = f"""<div class="hero">
 <h1>La bande</h1>
-<p class="sous">{_pluriel(len(rows), "tortue")}, {en_ligne} en ligne</p>
+<p class="sous">{_pluriel(len(rows), "compagnon")}, {en_ligne} en ligne</p>
 </div>
 <section>
 {liste}

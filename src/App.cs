@@ -22,6 +22,11 @@ public sealed unsafe class App
     const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
     readonly bool updated;
+    readonly bool eggTest;             // --egg : œuf de démonstration, rien n'est sauvegardé ni envoyé
+    Egg? egg;                          // première installation : l'œuf à faire éclore
+    bool hatched, announceName;
+    public bool AutoTap;               // --egg auto : l'œuf est tapoté tout seul (test sans souris)
+    double nextAutoTap = 3;
     nint inst, trayIcon, handCursor;
     uint taskbarCreated;
     int sizeLevel;                     // 2 petit, 3 moyen, 4 grand (à 100 % de zoom Windows)
@@ -37,6 +42,10 @@ public sealed unsafe class App
     readonly Bowling bowling;
     readonly GrassEvent grass = new();
     readonly DeckView deck = new();
+    readonly MenuPanel menu = new();
+    readonly SnailTrail trail = new();
+    readonly MenuModel menuModel = new();
+    bool autostartCached;
     double nextGrassAt = Now + 600;      // première touffe 10 min après le lancement, puis toutes les 40 à 90 min
     HostVisit? visit;
     (int x, int y) leftFrom;           // d'où ma tortue est partie en visite (pour le petit mot)
@@ -48,19 +57,23 @@ public sealed unsafe class App
 
     string PetName => life.D.Name ?? "Pépin";
 
-    public App(bool updated)
+    public App(bool updated, bool eggTest = false, Species? forced = null)
     {
         I = this;
         this.updated = updated;
-        mood = Mood.Load();
+        this.eggTest = eggTest;
+        mood = eggTest ? new Mood { Energy = 0.8, Hunger = 0.3, Happiness = 0.7, Affection = 0.35 } : Mood.Load();
+        if (mood.FirstRun || eggTest) mood.LifeData.Egg = true;
         sizeLevel = mood.Scale;
         life = new Life(mood.LifeData);
         life.CatchUp(mood.HoursAway);
-        band = new Band(mood.LifeData) { OnEvent = OnBandEvent, OnChanged = Save };
+        band = new Band(mood.LifeData) { OnEvent = OnBandEvent, OnChanged = Save, SpeciesCode = SpeciesInfo.Code(SpeciesInfo.Parse(mood.LifeData.Species)) };
         bowling = new Bowling(lane);
         var senses = new Senses();
-        var pet = new Pet(mood, senses, updated ? new NewShell() : null) { Win = win, Apps = apps, Life = life, Band = band, Bowl = bowling, Grass = grass };
+        var pet = new Pet(mood, senses, updated ? new NewShell() : null) { Win = win, Apps = apps, Life = life, Band = band, Bowl = bowling, Grass = grass, Species = SpeciesInfo.Parse(mood.LifeData.Species) };
         home = new Creature(pet, senses);
+        if (mood.LifeData.Egg)
+            egg = new Egg(forced ?? SpeciesInfo.All[Random.Shared.Next(SpeciesInfo.All.Length)]) { Hatched = OnHatched };
     }
 
     public int Run()
@@ -90,15 +103,29 @@ public sealed unsafe class App
         grass.Create(inst);
         grass.Resolved = OnGrass;
         deck.Create(inst);
+        trail.Create(inst);
+        menu.Init(inst);
+        menu.Model = BuildMenuModel;
+        menu.Act = OnMenu;
         taskbarCreated = RegisterWindowMessageW("TaskbarCreated");
-        SetupAutostart();
+        if (!eggTest) SetupAutostart();
+        autostartCached = Autostart;
         AddTray();
         Updater.CleanupOld();
         if (updated) life.Write($"A fait peau neuve (version {Updater.Current.ToString(3)}).");
-        band.Start();
+        if (egg is not null)
+        {
+            // l'animal n'existe pas encore : l'œuf tombe à l'endroit où il apparaîtra
+            egg.Create(inst);
+            home.SetHidden(true);
+            home.Senses.Update(Now, 0, home.Pet.X, home.Pet.Y);
+            egg.Drop(home.Pet.X, home.Pet.Y, home.Senses.Work, EggScale());
+            Save();
+        }
+        else band.Start();
 
         Tick();
-        ShowWindow(home.Hwnd, SW_SHOWNOACTIVATE);
+        if (egg is null) ShowWindow(home.Hwnd, SW_SHOWNOACTIVATE);
 
         MSG msg;
         while (GetMessageW(&msg, 0, 0, 0) > 0)
@@ -136,13 +163,14 @@ public sealed unsafe class App
 
     nint Handle(nint h, uint m, nint w, nint l)
     {
+        if (menu.Handle(h, m, w, l)) return 0;
         switch (m)
         {
             case WM_TIMER:
                 if (h == home.Hwnd) Tick();
                 return 0;
             case WM_MOUSEACTIVATE:
-                return MA_NOACTIVATE;
+                return h == menu.Hwnd ? MA_ACTIVATE : MA_NOACTIVATE;
             case WM_SETCURSOR:
                 SetCursor(handCursor);
                 return 1;
@@ -152,15 +180,15 @@ public sealed unsafe class App
                     if (c.Pet.Dragging) SetFps(60);
                     return 0;
                 }
-                if (Overlay.From(h) is Overlay ov && ov.HandleMouse(m)) return 0;
+                if (Overlay.From(h) is Overlay ov && ov.HandleMouse(m, l)) return 0;
                 break;
             case WM_RBUTTONUP:
-                ShowMenu();
+                if (h != menu.Hwnd) ShowMenu(fromTray: false);
                 return 0;
             case WM_TRAY:
             {
                 int ev = LoWord(l);
-                if (ev == WM_RBUTTONUP || ev == WM_LBUTTONUP) ShowMenu();
+                if (ev == WM_RBUTTONUP || ev == WM_LBUTTONUP) ShowMenu(fromTray: true);
                 return 0;
             }
             case WM_QUERYENDSESSION:
@@ -198,6 +226,31 @@ public sealed unsafe class App
         }
         apps.Update(now, home.Senses.IdleSeconds, home.Senses.CX, home.Senses.CY);
 
+        if (egg is not null && !hatched)
+        {
+            // avant l'éclosion il n'y a que l'œuf : rien d'autre ne vit ni ne s'affiche
+            uint edpi = Math.Max(96u, GetDpiForWindow(home.Hwnd));
+            DpiScale = edpi / 96.0;
+            if (AutoTap && egg.Phase == EggPhase.Idle && now > nextAutoTap) { egg.DebugTap(); nextAutoTap = now + 1.2; }
+            egg.Tick(dt, EggScale(), home.Hwnd);
+            if (!hatched)
+            {
+                SetFps(Math.Max(6, egg.Fps));
+                if (now - lastSave > 60) { Save(); lastSave = now; }
+                return;
+            }
+        }
+        if (egg is not null)
+        {
+            egg.Tick(dt, home.Scale, home.Hwnd);           // éclats, rayons et bannière après l'éclosion
+            if (egg.Phase == EggPhase.Done) { egg.Destroy(); egg = null; }
+        }
+        if (announceName && band.Registered && pet.Current is not Hatched)
+        {
+            announceName = false;
+            pet.Say($"Je m'appelle {PetName} !", 4);
+        }
+
         band.DrainUi();
         band.Tier = life.Tier;
         // une tortue qui dort reste visitable (l'invitée fait la sieste à côté) ; « away » = personne devant l'écran
@@ -209,6 +262,7 @@ public sealed unsafe class App
         DpiScale = dpi / 96.0;
         home.Tick(now, dt, dpi, sizeLevel);
         home.SetHidden(paused || pet.Current is AwayOnVisit);
+        trail.Tick(now, pet, home.Scale, home.Hwnd, !home.Hidden);
 
         if (bowling.Active && (paused || visit is not null || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) bowling.Stop();
         bowling.Tick(dt, pet, home.Scale, home.Hwnd);
@@ -217,6 +271,11 @@ public sealed unsafe class App
         MaybeSpawnGrass(now);
         grass.Tick(dt, home.Scale, home.Hwnd);
         deck.Tick(now);
+        if (menu.Visible)
+        {
+            menu.TrackHover((int)home.Senses.CX, (int)home.Senses.CY);
+            if (!menu.Animating) menu.Refresh();
+        }
 
         if (visit is not null)
         {
@@ -231,6 +290,7 @@ public sealed unsafe class App
         int fps = pet.Fps;
         if (visit is not null) fps = Math.Max(fps, visit.Guest.Pet.Fps);
         fps = Math.Max(fps, Math.Max(bowling.Fps, grass.Fps));
+        if (egg is not null) fps = Math.Max(fps, egg.Fps);
         if (pet.Dragging) fps = 60;
         SetFps(fps);
 
@@ -345,10 +405,10 @@ public sealed unsafe class App
 
     // ------------------------------------------------------------------ évènements et collection
 
-    void ShowDeck(string title, string subtitle, IReadOnlyDictionary<string, int> collection, IReadOnlyDictionary<string, int>? mine)
+    void ShowDeck(string title, string subtitle, IReadOnlyDictionary<string, int> collection, IReadOnlyDictionary<string, int>? mine, Species species)
     {
         home.Senses.Update(Now, 0, home.Pet.X, home.Pet.Y);
-        deck.Show(title, subtitle, collection, mine, home.Senses.Work, (int)Math.Max(2, Math.Round(3 * DpiScale)));
+        deck.Show(title, subtitle, collection, mine, species, home.Senses.Work, (int)Math.Max(2, Math.Round(3 * DpiScale)));
     }
 
     /// <summary>Une touffe d'herbe de temps en temps, quand tout est calme et que tu es là.</summary>
@@ -418,8 +478,8 @@ public sealed unsafe class App
             Updater.CheckInBackground(path => readyUpdate = path);
         }
         var pet = home.Pet;
-        // on attend un moment calme : pas de drag, pas de visite en cours
-        if (readyUpdate is string path && !updating && !pet.Dragging && visit is null && band.Outgoing is null &&
+        // on attend un moment calme : pas de drag, pas de visite en cours, pas d'éclosion
+        if (readyUpdate is string path && !updating && egg is null && !eggTest && !pet.Dragging && visit is null && band.Outgoing is null &&
             pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit or ComeBack))
         {
             updating = true;
@@ -451,10 +511,22 @@ public sealed unsafe class App
 
     NOTIFYICONDATAW NewNid() => new() { cbSize = (uint)sizeof(NOTIFYICONDATAW), hWnd = home.Hwnd, uID = 1 };
 
+    void RefreshTrayIcon()
+    {
+        nint old = trayIcon;
+        trayIcon = MakeIcon();
+        var nid = NewNid();
+        nid.uFlags = NIF_ICON;
+        nid.hIcon = trayIcon;
+        Shell_NotifyIconW(NIM_MODIFY, &nid);
+        if (old != 0) DestroyIcon(old);
+    }
+
     nint MakeIcon()
     {
         var ic = new PixelCanvas(16, 16);
-        TurtleArt.DrawIcon(ic);
+        if (egg is not null && !hatched) Egg.DrawIcon(ic);
+        else SpeciesArt.DrawIcon(ic, home.Pet.Species);
         const int S = 32;
         var bi = new BITMAPINFOHEADER { biSize = (uint)sizeof(BITMAPINFOHEADER), biWidth = S, biHeight = -S, biPlanes = 1, biBitCount = 32 };
         void* b;
@@ -475,167 +547,137 @@ public sealed unsafe class App
 
     // ------------------------------------------------------------------ menu
 
-    const int IdBowling = 60, IdMiniGames = 61, IdDeckMine = 62, IdGrass = 63, IdDeckOf = 2000;
-    const int IdSendRandom = 40, IdSendNote = 41, IdBandPage = 42, IdSpontaneous = 43, IdMessages = 44, IdRename = 45,
-              IdBlockGuest = 46, IdCarnetPage = 50, IdSendTo = 1000;
+    bool CanPlay => !bowling.Active && !paused && visit is null && band.Outgoing is null &&
+                    home.Pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
+    bool CanSend => band.Registered && band.Outgoing is null && visit is null &&
+                    home.Pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
 
-    void ShowMenu()
+    /// <summary>Ouvre le panneau : au-dessus de l'animal (clic droit sur lui) ou du curseur (icône de notification).</summary>
+    void ShowMenu(bool fromTray)
+    {
+        if (menu.Visible) { menu.Close(); return; }
+        if (fromTray && Now - menu.ClosedAt < 0.4) return;     // ce clic vient de le fermer (perte du focus)
+        band.Poke();
+        var pet = home.Pet;
+        POINT anchor;
+        if (fromTray || home.Hidden) GetCursorPos(&anchor);
+        else anchor = new POINT { X = (int)pet.X, Y = (int)(pet.Y - pet.Z - 34 * home.Scale) };
+        var mi = new MONITORINFO { cbSize = (uint)sizeof(MONITORINFO) };
+        GetMonitorInfoW(MonitorFromPoint(anchor, MONITOR_DEFAULTTONEAREST), &mi);
+        menu.Open(anchor, mi.rcWork, (int)Math.Max(2, Math.Round(3 * DpiScale)), aboveAnchor: true);
+    }
+
+    MenuModel BuildMenuModel()
     {
         var pet = home.Pet;
-        band.Poke();
-        nint menu = CreatePopupMenu(), sizes = CreatePopupMenu(), carnet = CreatePopupMenu(), bande = CreatePopupMenu(), sendTo = CreatePopupMenu();
-
-        AppendMenuW(menu, MF_STRING | MF_GRAYED, 1, $"{PetName} {pet.Current.Label}");
-        AppendMenuW(menu, MF_STRING | MF_GRAYED, 2, mood.Describe());
-        AppendMenuW(menu, MF_SEPARATOR, 0, null);
-
-        // carnet
-        AppendMenuW(carnet, MF_STRING | MF_GRAYED, 3, life.Summary());
-        AppendMenuW(carnet, MF_STRING | MF_GRAYED, 4, life.TodayLine());
-        AppendMenuW(carnet, MF_SEPARATOR, 0, null);
+        var m = menuModel;
+        m.Name = PetName;
+        m.Species = pet.Species;
+        pet.V.CopyTo(m.Portrait);
+        m.Tier = life.Tier;
+        m.Summary = life.Summary();
+        m.Today = life.TodayLine();
+        m.Affection = mood.Affection; m.Energy = mood.Energy; m.Belly = 1 - mood.Hunger;
+        m.Egg = egg is not null && !hatched;
+        m.CanPlay = CanPlay;
+        m.CanGrass = CanPlay && !grass.Active;
+        m.CanSend = CanSend;
+        m.Asleep = pet.Current.Asleep;
+        m.Away = pet.Current is AwayOnVisit or LeaveScreen or LeaveForVisit;
+        m.Paused = paused;
+        m.Autostart = autostartCached;
+        m.Spontaneous = life.D.SpontaneousVisits; m.Messages = life.D.AcceptMessages; m.MiniGames = life.D.MiniGames;
+        m.Registered = band.Registered;
+        m.SizeLevel = sizeLevel;
+        m.Version = Updater.Current.ToString(3);
+        m.BandStatus = !band.Registered ? "CONNEXION…" : !band.Connected ? "HORS LIGNE" : $"{band.Online}/{band.BandSize} EN LIGNE";
+        m.Band.Clear();
+        foreach (var t in band.Turtles.OrderByDescending(t => t.Online).Take(6))
+            m.Band.Add(new BandEntry(t.Id, t.Name, t.Online, t.Online && t.Status == "home", SpeciesInfo.Parse(t.Species)));
+        m.GuestName = visit?.Info.From?.Name;
+        m.Journal.Clear();
         foreach (var j in life.D.Journal.TakeLast(8).Reverse())
         {
             var when = DateTimeOffset.FromUnixTimeSeconds(j.T).ToLocalTime();
-            string stamp = when.Date == DateTime.Today ? when.ToString("HH:mm") : when.ToString("dd/MM");
-            string text = j.Text.Length > 70 ? j.Text[..69] + "…" : j.Text;
-            AppendMenuW(carnet, MF_STRING | MF_GRAYED, 5, $"{stamp}   {text.Replace("&", "&&")}");
+            m.Journal.Add((when.Date == DateTime.Today ? when.ToString("HH:mm") : when.ToString("dd/MM"), j.Text));
         }
-        AppendMenuW(carnet, MF_SEPARATOR, 0, null);
-        AppendMenuW(carnet, MF_STRING, IdDeckMine, "Ma collection");
-        if (band.Registered) AppendMenuW(carnet, MF_STRING, IdCarnetPage, "Ouvrir son carnet en ligne");
-        AppendMenuW(menu, MF_POPUP, (nuint)carnet, "Carnet");
+        return m;
+    }
 
-        // la bande
-        bool canSend = band.Registered && band.Outgoing is null && visit is null && pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
-        string header = !band.Registered ? "La bande : connexion…" : !band.Connected ? "La bande : hors ligne" :
-                        $"La bande : {band.BandSize} tortue{(band.BandSize > 1 ? "s" : "")}, {band.Online} en ligne";
-        AppendMenuW(bande, MF_STRING | MF_GRAYED, 6, header);
-        if (band.Outgoing is VisitDto o) AppendMenuW(bande, MF_STRING | MF_GRAYED, 7, $"{PetName} est chez {o.Host?.Name}");
-        if (visit is not null) AppendMenuW(bande, MF_STRING | MF_GRAYED, 8, $"{visit.Info.From?.Name} est en visite ici");
-        AppendMenuW(bande, MF_SEPARATOR, 0, null);
-        AppendMenuW(bande, canSend ? MF_STRING : MF_GRAYED, IdSendRandom, "Envoyer en visite au hasard");
-        var available = band.Turtles.Where(t => t.Online && t.Status == "home").Take(20).ToList();
-        for (int i = 0; i < available.Count; i++)
-            AppendMenuW(sendTo, canSend ? MF_STRING : MF_GRAYED, (nuint)(IdSendTo + i), available[i].Name.Replace("&", "&&"));
-        if (available.Count == 0) AppendMenuW(sendTo, MF_STRING | MF_GRAYED, 9, "personne de dispo pour l'instant");
-        AppendMenuW(bande, MF_POPUP, (nuint)sendTo, "Envoyer chez…");
-        AppendMenuW(bande, canSend ? MF_STRING : MF_GRAYED, IdSendNote, "Envoyer avec un petit mot…");
-        nint decks = CreatePopupMenu();
-        var others = band.Turtles.Take(25).ToList();
-        for (int i = 0; i < others.Count; i++)
-            AppendMenuW(decks, MF_STRING, (nuint)(IdDeckOf + i), others[i].Name.Replace("&", "&&") + (others[i].Online ? "" : "  (hors ligne)"));
-        if (others.Count == 0) AppendMenuW(decks, MF_STRING | MF_GRAYED, 12, "personne pour l'instant");
-        AppendMenuW(bande, MF_POPUP, (nuint)decks, "Voir la collection de…");
-        AppendMenuW(bande, MF_SEPARATOR, 0, null);
-        AppendMenuW(bande, life.D.SpontaneousVisits ? MF_CHECKED : 0, IdSpontaneous, "Visites spontanées");
-        AppendMenuW(bande, life.D.AcceptMessages ? MF_CHECKED : 0, IdMessages, "Accepter les petits mots");
-        AppendMenuW(bande, band.Registered ? MF_STRING : MF_GRAYED, IdRename, $"Renommer {PetName}…");
-        if (visit is not null) AppendMenuW(bande, MF_STRING, IdBlockGuest, $"Bloquer {visit.Info.From?.Name}");
-        AppendMenuW(bande, MF_STRING, IdBandPage, "Voir la bande en ligne");
-        AppendMenuW(menu, MF_POPUP, (nuint)bande, "La bande");
-
-        // jeux
-        nint games = CreatePopupMenu();
-        bool canPlay = !bowling.Active && !paused && visit is null && band.Outgoing is null && pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
-        AppendMenuW(games, canPlay ? MF_STRING : MF_GRAYED, IdBowling, "Bowling (lance-le !)");
-        AppendMenuW(games, canPlay && !grass.Active ? MF_STRING : MF_GRAYED, IdGrass, "Faire pousser une touffe d'herbe");
-        AppendMenuW(games, MF_SEPARATOR, 0, null);
-        AppendMenuW(games, life.D.MiniGames ? MF_CHECKED : 0, IdMiniGames, "Propose des jeux de temps en temps");
-        AppendMenuW(menu, MF_POPUP, (nuint)games, "Jeux");
-        AppendMenuW(menu, MF_SEPARATOR, 0, null);
-
-        AppendMenuW(menu, MF_STRING, 10, pet.Current.Asleep ? "Le réveiller" : "Le mettre au lit");
-        AppendMenuW(menu, MF_STRING, 11, "L'appeler ici");
-        AppendMenuW(sizes, sizeLevel == 2 ? MF_CHECKED : 0, 20, "Petit");
-        AppendMenuW(sizes, sizeLevel == 3 ? MF_CHECKED : 0, 21, "Moyen");
-        AppendMenuW(sizes, sizeLevel == 4 ? MF_CHECKED : 0, 22, "Grand");
-        AppendMenuW(menu, MF_POPUP, (nuint)sizes, "Taille");
-        AppendMenuW(menu, paused ? MF_CHECKED : 0, 30, "Pause (le cacher)");
-        AppendMenuW(menu, Autostart ? MF_CHECKED : 0, 31, "Lancer au démarrage de Windows");
-        AppendMenuW(menu, MF_STRING | MF_GRAYED, 32, $"Version {Updater.Current.ToString(3)}");
-        AppendMenuW(menu, MF_SEPARATOR, 0, null);
-        AppendMenuW(menu, MF_STRING, 99, "Quitter");
-
-        POINT p;
-        GetCursorPos(&p);
-        SetForegroundWindow(home.Hwnd);
-        int cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, p.X, p.Y, 0, home.Hwnd, 0);
-        PostMessageW(home.Hwnd, WM_NULL, 0, 0);
-        DestroyMenu(menu);
-
-        switch (cmd)
+    void OnMenu(MenuAction a, string? arg)
+    {
+        var pet = home.Pet;
+        switch (a)
         {
-            case 10:
+            case MenuAction.SleepWake:
                 if (pet.Current is AwayOnVisit) break;
                 pet.Switch(pet.Current.Asleep ? new WakeUp() : new Sleep());
                 break;
-            case 11:
+            case MenuAction.CallHere:
                 CallHere();
                 break;
-            case 20 or 21 or 22:
-                sizeLevel = cmd - 18;
+            case MenuAction.Size:
+                sizeLevel = int.Parse(arg!);
                 mood.Scale = sizeLevel;
                 break;
-            case 30:
+            case MenuAction.Pause:
                 TogglePause();
                 break;
-            case 31:
+            case MenuAction.ToggleAutostart:
                 Autostart = !Autostart;
+                autostartCached = Autostart;
                 break;
-            case IdSendRandom:
+            case MenuAction.SendRandom:
                 SendOnVisit(null, null);
                 break;
-            case IdBowling:
-                if (canPlay && !pet.Dragging) pet.Switch(new BowlSetup());
+            case MenuAction.Bowling:
+                if (CanPlay && !pet.Dragging) pet.Switch(new BowlSetup());
                 break;
-            case IdGrass:
-                if (canPlay) SpawnGrass();
+            case MenuAction.Grass:
+                if (CanPlay) SpawnGrass();
                 break;
-            case IdDeckMine:
-                ShowDeck($"Collection de {PetName}", life.Summary(), life.D.Collection, null);
+            case MenuAction.Collection:
+                ShowDeck($"Collection de {PetName}", life.Summary(), life.D.Collection, null, pet.Species);
                 break;
-            case >= IdDeckOf when cmd - IdDeckOf < others.Count:
-            {
-                var other = others[cmd - IdDeckOf];
-                band.FetchTurtle(other.Id, (d, err) =>
+            case MenuAction.DeckOf when arg is not null:
+                band.FetchTurtle(arg, (d, err) =>
                 {
                     if (d is null) { pet.Say(Band.ErrorText(err), 3); return; }
                     string tier = Life.TierNames[Math.Clamp(d.Tier, 0, 4)];
                     string sub = d.Friendship > 0 ? $"{tier} - amitié {d.Friendship}" : tier;
-                    ShowDeck($"Collection de {d.Name}", sub, d.Collection, life.D.Collection);
+                    ShowDeck($"Collection de {d.Name}", sub, d.Collection, life.D.Collection, SpeciesInfo.Parse(d.Species));
                 });
                 break;
-            }
-            case IdMiniGames:
+            case MenuAction.ToggleMiniGames:
                 life.D.MiniGames = !life.D.MiniGames;
                 Save();
                 break;
-            case IdSendNote:
+            case MenuAction.SendNote:
             {
                 string? msg = InputDialog.Ask("Petit mot", $"Un petit mot que {PetName} portera (80 caractères) :", "", 80, "Envoyer");
                 if (!string.IsNullOrWhiteSpace(msg)) SendOnVisit(null, msg);
                 break;
             }
-            case >= IdSendTo when cmd - IdSendTo < available.Count:
-                SendOnVisit(available[cmd - IdSendTo].Id, null);
+            case MenuAction.SendTo when arg is not null:
+                SendOnVisit(arg, null);
                 break;
-            case IdSpontaneous:
+            case MenuAction.ToggleSpontaneous:
                 life.D.SpontaneousVisits = !life.D.SpontaneousVisits;
                 Save();
                 break;
-            case IdMessages:
+            case MenuAction.ToggleMessages:
                 life.D.AcceptMessages = !life.D.AcceptMessages;
                 band.AcceptMessages = life.D.AcceptMessages;
                 Save();
                 break;
-            case IdRename:
+            case MenuAction.Rename:
             {
                 string? name = InputDialog.Ask("Renommer", "Nouveau nom (2 à 16 lettres) :", PetName, 16, "OK");
                 if (!string.IsNullOrWhiteSpace(name) && name != PetName)
                     band.Rename(name, err => pet.Say(err is null ? $"Je m'appelle {PetName} !" : Band.ErrorText(err), 3));
                 break;
             }
-            case IdBlockGuest:
+            case MenuAction.BlockGuest:
                 if (visit?.Info.From?.Id is string gid)
                 {
                     band.Block(gid);
@@ -643,13 +685,13 @@ public sealed unsafe class App
                     visit.Cancel();
                 }
                 break;
-            case IdCarnetPage:
-                OpenUrl($"{Net.Base}t/{life.D.BandId}");
+            case MenuAction.CarnetPage:
+                if (band.Registered) OpenUrl($"{Net.Base}t/{life.D.BandId}");
                 break;
-            case IdBandPage:
+            case MenuAction.BandPage:
                 OpenUrl($"{Net.Base}bande");
                 break;
-            case 99:
+            case MenuAction.Quit:
                 DestroyWindow(home.Hwnd);
                 break;
         }
@@ -688,6 +730,7 @@ public sealed unsafe class App
             home.SetHidden(true);
             say.Hide();
             note.Hide();
+            trail.Clear();
             bowling.Hide();
             grass.Stop();
             deck.Hide();
@@ -741,8 +784,38 @@ public sealed unsafe class App
         }
     }
 
+    /// <summary>Taille des pixels de l'œuf : comme ceux de l'animal (taille choisie × zoom Windows).</summary>
+    int EggScale()
+    {
+        uint dpi = Math.Max(96u, GetDpiForWindow(home.Hwnd));
+        return Math.Max(1, (int)Math.Round(sizeLevel * dpi / 96.0));
+    }
+
+    /// <summary>Flash de l'éclosion : l'animal tiré au sort apparaît à la place de l'œuf.</summary>
+    void OnHatched(Species s)
+    {
+        hatched = true;
+        var pet = home.Pet;
+        pet.Species = s;
+        band.SpeciesCode = SpeciesInfo.Code(s);
+        if (!eggTest) life.Hatch(s);
+        else { life.D.Egg = false; life.D.Species = SpeciesInfo.Code(s); }
+        pet.X = egg!.X; pet.Y = egg.Y; pet.Z = 0;
+        pet.Switch(new Hatched());
+        home.SetHidden(false);
+        RefreshTrayIcon();
+        lastT = Now;
+        if (!eggTest)
+        {
+            band.Start();
+            announceName = true;
+            Save();
+        }
+    }
+
     void Save()
     {
+        if (eggTest) return;
         var pet = home.Pet;
         // en visite, on se souvient d'où elle est partie plutôt que de sa position hors écran
         bool away = pet.Current is AwayOnVisit or LeaveScreen || pet.OffScreen;

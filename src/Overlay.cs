@@ -12,8 +12,9 @@ public sealed unsafe class Overlay
     static readonly Dictionary<nint, Overlay> byHwnd = [];
     public static Overlay? From(nint hwnd) => byHwnd.GetValueOrDefault(hwnd);
 
-    readonly bool clickable;
+    readonly bool clickable, activatable;
     public Action? Click;                    // clic gauche sur un pixel opaque (mode clickable)
+    public Action<uint, int, int>? Mouse;    // message souris + position en pixels de la toile (remplace Click)
     nint hwnd, memDc, dib, oldBmp;
     uint* bits;
     int bmpW, bmpH, curScale;
@@ -21,14 +22,24 @@ public sealed unsafe class Overlay
     bool visible;
     int lastX = int.MinValue, lastY;
 
-    public Overlay(bool clickable = false) => this.clickable = clickable;
+    /// <param name="activatable">Peut prendre le focus (menu : se ferme au clic dehors, Échap).</param>
+    public Overlay(bool clickable = false, bool activatable = false)
+    {
+        this.clickable = clickable || activatable;
+        this.activatable = activatable;
+    }
 
     public bool Created => hwnd != 0;
+    public bool Activatable => activatable;
+    public nint Hwnd => hwnd;
+    public int X => lastX;
+    public int Y => lastY;
+    public int PixelScale => curScale;
     public bool Visible => visible;
 
     public void Create(nint inst)
     {
-        uint ex = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | (clickable ? 0 : WS_EX_TRANSPARENT);
+        uint ex = WS_EX_LAYERED | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | (activatable ? 0 : WS_EX_NOACTIVATE) | (clickable ? 0 : WS_EX_TRANSPARENT);
         hwnd = CreateWindowExW(ex, App.WindowClass, "Pépin (décor)", WS_POPUP, 0, 0, 1, 1, 0, 0, inst, 0);
         byHwnd[hwnd] = this;
         memDc = CreateCompatibleDC(App.ScreenDc);
@@ -42,8 +53,13 @@ public sealed unsafe class Overlay
     }
 
     /// <summary>Message souris reçu par la fenêtre (routé par App). Vrai si traité.</summary>
-    public bool HandleMouse(uint m)
+    public bool HandleMouse(uint m, nint l)
     {
+        if (Mouse is not null && curScale > 0)
+        {
+            Mouse(m, LoWord(l) / curScale, HiWord(l) / curScale);
+            return true;
+        }
         if (m == WM_LBUTTONDOWN) { Click?.Invoke(); return true; }
         return m is WM_LBUTTONUP or WM_MOUSEMOVE or WM_CAPTURECHANGED;
     }

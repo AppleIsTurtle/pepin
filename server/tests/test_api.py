@@ -46,20 +46,23 @@ def client(tmp_path, monkeypatch, horloge):
 _ip = [0]
 
 
-def inscrire(client, version="1.0"):
+def inscrire(client, version="1.0", species=None):
     _ip[0] += 1
-    r = client.post("/api/register", json={"version": version}, headers={"X-Real-IP": f"10.0.0.{_ip[0] % 250}"})
+    corps = {"version": version} if species is None else {"version": version, "species": species}
+    r = client.post("/api/register", json=corps, headers={"X-Real-IP": f"10.0.0.{_ip[0] % 250}"})
     assert r.status_code == 201, r.text
     d = r.json()
     d["h"] = {"Authorization": f"Bearer {d['token']}"}
     return d
 
 
-def battement(client, tortue, horloge, status="home", ack=None, accept_messages=True, tier=0):
+def battement(client, tortue, horloge, status="home", ack=None, accept_messages=True, tier=0, species=None):
     horloge.avance(5)  # respecte la limite d'un heartbeat toutes les 4 s
     corps = {"version": "1.0", "status": status, "tier": tier, "accept_messages": accept_messages}
     if ack is not None:
         corps["ack"] = ack
+    if species is not None:
+        corps["species"] = species
     r = client.post("/api/heartbeat", json=corps, headers=tortue["h"])
     assert r.status_code == 200, r.text
     return r.json()
@@ -206,7 +209,7 @@ def test_flux_complet_de_visite(client, horloge):
     r = visiter(client, a, b, message="  Coucou\n\t toi\x07 !  ")
     assert r.status_code == 201
     v = r.json()["visit"]
-    assert v["host"] == {"id": b["id"], "name": b["name"]}
+    assert v["host"] == {"id": b["id"], "name": b["name"], "species": "tortue"}
     assert 180 <= v["duration"] <= 360
     assert sql("SELECT status FROM turtles WHERE id = ?", a["id"])[0][0] == "visiting"
 
@@ -215,7 +218,7 @@ def test_flux_complet_de_visite(client, horloge):
     ev = evs[0]
     assert ev["type"] == "visitor"
     assert ev["visit"] == {
-        "id": v["id"], "from": {"id": a["id"], "name": a["name"], "tier": 0},
+        "id": v["id"], "from": {"id": a["id"], "name": a["name"], "tier": 0, "species": "tortue"},
         "message": "Coucou toi !", "duration": v["duration"],
     }
     # non acquitté : relivré ; acquitté : disparaît
@@ -444,7 +447,7 @@ def test_band(client, horloge):
     assert [t["name"] for t in liste] == ["Zébulon", "Ancien", "Écureuil"]  # en ligne d'abord, puis par nom
     assert liste[0]["online"] is True and liste[1]["online"] is False
     assert liste[2]["friendship"] == 4 and liste[0]["friendship"] == 0
-    assert set(liste[0]) == {"id", "name", "tier", "online", "status", "friendship", "blocked"}
+    assert set(liste[0]) == {"id", "name", "tier", "species", "online", "status", "friendship", "blocked"}
     # plus de 30 jours sans nouvelles : disparaît
     horloge.avance(30 * 86400)
     battement(client, a, horloge)
@@ -557,7 +560,7 @@ def test_page_introuvable(client):
         r = client.get(chemin)
         assert r.status_code == 404
         _verifie_entetes(r)
-        assert "Tortue introuvable" in r.text and "<script>" not in r.text
+        assert "Compagnon introuvable" in r.text and "<script>" not in r.text
 
 
 def test_page_bande(client, horloge):
@@ -568,16 +571,16 @@ def test_page_bande(client, horloge):
     assert r.status_code == 200
     _verifie_entetes(r)
     h = r.text
-    assert "3 tortues, 1 en ligne" in h
+    assert "3 compagnons, 1 en ligne" in h
     for t in (a, b, c):
         assert f'href="/friend/t/{t["id"]}"' in h
-    assert h.count('class="dot on"') == 1 and "Nouvelle tortue" in h
+    assert h.count('class="dot on"') == 1 and "Nouveau venu" in h
     assert 'href="/friend/"' in h
 
 
 def test_page_bande_vide(client):
     h = client.get("/bande").text
-    assert "0 tortue, 0 en ligne" in h and "Personne pour l'instant." in h
+    assert "0 compagnon, 0 en ligne" in h and "Personne pour l'instant." in h
 
 
 def test_csp_empreinte_style(client):
@@ -622,7 +625,7 @@ def test_bande_publique(client, horloge):
     d = r.json()
     assert d["size"] == 2 and d["online"] == 1
     assert [t["id"] for t in d["turtles"]] == [a["id"], b["id"]]   # en ligne d'abord
-    assert set(d["turtles"][0]) == {"id", "name", "tier", "online"}  # rien de plus que la page publique
+    assert set(d["turtles"][0]) == {"id", "name", "tier", "species", "online"}  # rien de plus que la page publique
     assert "token" not in r.text
 
 
@@ -649,3 +652,68 @@ def test_carnet_trouvailles_et_consultation(client, horloge):
     assert client.post("/api/block", json={"id": b["id"]}, headers=a["h"]).status_code == 200
     assert client.get(f"/api/turtle/{b['id']}", headers=a["h"]).status_code == 404
     assert client.get(f"/api/turtle/{a['id']}", headers=b["h"]).status_code == 404
+
+
+# --- espèces (v3) ---
+
+def test_espece_a_l_inscription(client, horloge):
+    a = inscrire(client, species="herisson")
+    b = inscrire(client)                                   # client 2.x : pas d'espèce = tortue
+    assert sql("SELECT species FROM turtles WHERE id = ?", a["id"])[0][0] == "herisson"
+    assert sql("SELECT species FROM turtles WHERE id = ?", b["id"])[0][0] == "tortue"
+    battement(client, a, horloge)
+    liste = {t["id"]: t for t in client.get("/api/band", headers=b["h"]).json()["turtles"]}
+    assert liste[a["id"]]["species"] == "herisson"
+    assert client.get(f"/api/turtle/{a['id']}", headers=b["h"]).json()["species"] == "herisson"
+
+
+def test_espece_inconnue_refusee(client, horloge):
+    r = client.post("/api/register", json={"version": "3.0.0", "species": "dragon"}, headers={"X-Real-IP": "10.9.9.9"})
+    assert r.status_code == 422
+    a = inscrire(client)
+    horloge.avance(5)
+    corps = {"version": "3.0.0", "status": "home", "tier": 0, "accept_messages": True, "species": "licorne"}
+    assert client.post("/api/heartbeat", json=corps, headers=a["h"]).status_code == 422
+
+
+def test_espece_par_heartbeat(client, horloge):
+    a = inscrire(client)
+    battement(client, a, horloge, species="grenouille")
+    assert sql("SELECT species FROM turtles WHERE id = ?", a["id"])[0][0] == "grenouille"
+    battement(client, a, horloge)                          # un ancien client n'envoie rien : on garde
+    assert sql("SELECT species FROM turtles WHERE id = ?", a["id"])[0][0] == "grenouille"
+
+
+def test_espece_du_visiteur(client, horloge):
+    a, b = inscrire(client, species="axolotl"), inscrire(client, species="panda-roux")
+    battement(client, a, horloge)
+    battement(client, b, horloge)
+    v = visiter(client, a, b).json()["visit"]
+    assert v["host"]["species"] == "panda-roux"
+    ev = battement(client, b, horloge)["events"][0]
+    assert ev["visit"]["from"]["species"] == "axolotl"
+
+
+def test_page_espece(client, horloge):
+    a = inscrire(client, species="escargot")
+    b = inscrire(client)
+    battement(client, a, horloge)
+    h = client.get(f"/t/{a['id']}").text
+    assert '/friend/img/escargot/neutre.png' in h and "Un escargot" in h
+    h = client.get(f"/t/{b['id']}").text
+    assert '/friend/img/neutre.png' in h and "Une tortue" in h
+    assert '/friend/img/escargot/neutre.png' in client.get("/bande").text
+
+
+def test_migration_espece(tmp_path, monkeypatch):
+    # une base d'avant la v3 (sans colonne species) est migrée, les comptes deviennent des tortues
+    chemin = tmp_path / "vieille.db"
+    monkeypatch.setattr(db, "DB_PATH", str(chemin))
+    c = sqlite3.connect(chemin)
+    c.executescript(db.SCHEMA)
+    c.execute("INSERT INTO turtles (id, token_hash, name, name_key, created, last_seen) VALUES ('abcd1234', 'h', 'Vieux', 'vieux', 1, 1)")
+    c.commit()
+    c.close()
+    db.init()
+    db.init()                                              # deux fois : sans effet la seconde
+    assert sql("SELECT species FROM turtles WHERE id = 'abcd1234'")[0][0] == "tortue"
