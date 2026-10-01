@@ -111,17 +111,6 @@ public static class Glyphs
     };
 
     // ---------------------------------------------------------------- icônes du menu ('#' = couleur d'encre choisie)
-    public static readonly string[] IcoPin =
-        ["..##..", ".####.", "..##..", ".rrrr.", ".####.", "######", "######", "######", ".####."];
-    public static readonly string[] IcoSprout =
-        [".....#....", "..##.#.##.", ".####.####", ".###.#.###", "..#..#..#.", ".....#....", ".....#....", "..CCCCCC..", ".CCCCCCCC.", "..CCCCCC.."];
-    public static readonly string[] IcoLetter =
-        ["kkkkkkkkkkkk", "kk########kk", "k#k######k#k", "k##k####k##k", "k###krrk###k", "k####kk####k", "k##########k", "kkkkkkkkkkkk"];
-    public static readonly string[] IcoBook =
-        [".kkkkkkkkk.", "kwwwwkwwwwk", "kwppwkwyywk", "kwppwkwyywk", "kwwwwkwwwwk", "kwggwkwBBwk", "kwggwkwBBwk", "kwwwwkwwwwk", ".kkkkkkkkk."];
-    public static readonly string[] IcoMoon = ["..####.", ".###...", "###....", "###..#.", "###....", ".###...", "..####."];
-    public static readonly string[] IcoSun = ["#..#..#", ".#.#.#.", "..###..", "#######", "..###..", ".#.#.#.", "#..#..#"];
-    public static readonly string[] IcoHere = [".###.", "#####", "##.##", "#####", ".###.", "..#..", "..#.."];
     public static readonly string[] IcoGear = ["..#.#..", ".#####.", "###.###", "##...##", "###.###", ".#####.", "..#.#.."];
     public static readonly string[] IcoNotebook = ["######.", "#....##", "#.##.##", "#....##", "#.##.##", "#....##", "######."];
     public static readonly string[] IcoPause = ["##.##", "##.##", "##.##", "##.##", "##.##"];
@@ -136,6 +125,12 @@ public static class Glyphs
     public static readonly string[] IcoGlobe = [".###.", "#.#.#", "#####", "#.#.#", ".###."];
     public static readonly string[] IcoPencil = ["....##", "...###", "..###.", ".###..", "###...", "##...."];
     public static readonly string[] IcoNo = [".###.", "#..##", "#.#.#", "##..#", ".###."];
+    public static readonly string[] IcoBowl =
+        ["..#..", ".###.", "..#..", ".###.", "#####", "#####", "#####", ".###."];
+    public static readonly string[] IcoLeaf =
+        ["##...##", "###.###", ".##.##.", "...#...", "...#...", "...#...", ".#####."];
+    public static readonly string[] IcoHeart = [".#.#.", "#####", "#####", ".###.", "..#.."];
+    public static readonly string[] IcoBerry = ["..#..", ".###.", "#####", "#####", ".###.", "..#.."];
     public static readonly string[] StarShape = ["..#..", ".###.", "#####", ".###.", "#...#"];
 
     /// <summary>Comme <see cref="DrawAt"/>, mais '#' prend la couleur <paramref name="ink"/>.</summary>

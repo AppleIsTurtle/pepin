@@ -42,7 +42,7 @@ public sealed class MenuModel
 /// </summary>
 public sealed class MenuPanel
 {
-    public const int W = 140, H = 190;
+    public const int W = 116, H = 160;
     const double OpenAnim = 0.18;
 
     struct Btn
@@ -196,14 +196,13 @@ public sealed class MenuPanel
     }
 
     // ================================================================== dessin
+    // Palette volontairement sobre : encre + crème, un seul accent (le ciel) qui s'allume au survol, et un rouge
+    // réservé aux actions destructrices (quitter, bloquer).
 
     static readonly uint Ink = Glyphs.K, Paper = PixelCanvas.Rgb(255, 248, 231), Sky = PixelCanvas.Rgb(138, 208, 236),
-        SkyDark = PixelCanvas.Rgb(98, 168, 210), Dim = PixelCanvas.Rgb(128, 116, 100), Bar = PixelCanvas.Rgb(232, 221, 196),
-        Track = PixelCanvas.Rgb(214, 202, 178), Grey = PixelCanvas.Rgb(186, 182, 176), White = Glyphs.White,
-        Coral = PixelCanvas.Rgb(240, 112, 92), Leaf = PixelCanvas.Rgb(104, 186, 78), Blue = PixelCanvas.Rgb(86, 148, 230),
-        Grape = PixelCanvas.Rgb(166, 108, 210), Amber = PixelCanvas.Rgb(250, 196, 72), Sand = PixelCanvas.Rgb(214, 198, 166),
-        Cherry = PixelCanvas.Rgb(222, 74, 84), HeartCol = PixelCanvas.Rgb(242, 104, 140), BoltCol = PixelCanvas.Rgb(246, 186, 40),
-        Berry = PixelCanvas.Rgb(232, 66, 72), Mint = PixelCanvas.Rgb(92, 196, 120);
+        SkyDark = PixelCanvas.Rgb(98, 168, 210), Deep = PixelCanvas.Rgb(52, 100, 150), Dim = PixelCanvas.Rgb(128, 116, 100),
+        Bar = PixelCanvas.Rgb(232, 221, 196), Track = PixelCanvas.Rgb(214, 202, 178), White = Glyphs.White,
+        Stripe = PixelCanvas.Rgb(244, 235, 214), Cherry = PixelCanvas.Rgb(204, 62, 74);
 
     const int Footer = H - 19;               // bouton du bas des sous-pages
 
@@ -245,36 +244,35 @@ public sealed class MenuPanel
 
     static void Home(MenuModel m)
     {
-        // bandeau du haut : ciel + portrait
-        Fill(1, 1, W - 2, 52, Sky);
-        Fill(1, 50, W - 2, 3, SkyDark);
-        HLine(0, 53, W, Ink);
-        RoundRect(5, 5, 44, 44, Paper, Ink, 2);
-        Fill(6, 38, 42, 10, PixelCanvas.Rgb(178, 226, 132));       // un bout d'herbe sous ses pieds
-        DrawPortrait(m, 6, 6, 42, 42);
+        // bandeau du haut : ciel, portrait, nom, jauges
+        Fill(1, 1, W - 2, 46, Sky);
+        HLine(0, 47, W, Ink);
+        Fill(3, 35, 42, 10, SkyDark);                               // un bout de sol sous ses pieds
+        DrawPortrait(m, 3, 3, 42, 42);
 
-        Text(PixelFont.Fit(m.Name.ToUpperInvariant(), W - 60), 54, 7, Ink, White);
+        Text(PixelFont.Fit(m.Name.ToUpperInvariant(), W - 54), 50, 5, Ink, null);
         for (int i = 0; i < 4; i++)
-            Glyphs.DrawTinted(cv!, Glyphs.StarShape, 54 + i * 7, 17, i < m.Tier ? BoltCol : PixelCanvas.Rgb(110, 150, 175));
-        Gauge(54, 27, Glyphs.Heart, null, m.Affection, HeartCol);
-        Gauge(54, 35, Glyphs.IcoBolt, BoltCol, m.Energy, BoltCol);
-        Gauge(54, 43, Glyphs.Strawberry, null, m.Belly, Berry, iconDy: -1);
+            Glyphs.DrawTinted(cv!, Glyphs.StarShape, 50 + i * 7, 15, i < m.Tier ? Ink : SkyDark);
+        Gauge(50, 24, Glyphs.IcoHeart, m.Affection);
+        Gauge(50, 31, Glyphs.IcoBolt, m.Energy);
+        Gauge(50, 38, Glyphs.IcoBerry, m.Belly);
 
         if (m.Egg)
         {
-            TextC("UN ŒUF MYSTÈRE...", W / 2, 66, Ink);
-            TextC("TAPOTE-LE POUR", W / 2, 84, Dim);
-            TextC("QU'IL ÉCLOSE !", W / 2, 94, Dim);
+            TextC("UN ŒUF MYSTÈRE...", W / 2, 70, Ink);
+            TextC("TAPOTE-LE POUR", W / 2, 88, Dim);
+            TextC("QU'IL ÉCLOSE !", W / 2, 98, Dim);
         }
         else
         {
-            Tile(4, 58, 64, 40, Coral, Glyphs.IcoPin, "BOWLING", MenuAction.Bowling, null, m.CanPlay);
-            Tile(72, 58, 64, 40, Leaf, Glyphs.IcoSprout, "HERBE", MenuAction.Grass, null, m.CanGrass);
-            Tile(4, 102, 64, 40, Blue, Glyphs.IcoLetter, "VISITE", MenuAction.Go, nameof(MenuPage.Band), !m.Away);
-            Tile(72, 102, 64, 40, Grape, Glyphs.IcoBook, "COLLECTION", MenuAction.Collection, null, true);
+            const int x = 4, w = W - 8;
+            Row(x, 52, w, 15, Glyphs.IcoBowl, "BOWLING", MenuAction.Bowling, null, m.CanPlay);
+            Row(x, 69, w, 15, Glyphs.IcoLeaf, "HERBE", MenuAction.Grass, null, m.CanGrass);
+            Row(x, 86, w, 15, Glyphs.IcoSmallLetter, "VISITE", MenuAction.Go, nameof(MenuPage.Band), !m.Away);
+            Row(x, 103, w, 15, Glyphs.IcoSmallBook, "COLLECTION", MenuAction.Collection, null, true);
 
-            Pill(4, 147, 64, 15, m.Asleep ? Glyphs.IcoSun : Glyphs.IcoMoon, m.Asleep ? "RÉVEIL" : "DODO", MenuAction.SleepWake, !m.Away);
-            Pill(72, 147, 64, 15, Glyphs.IcoHere, "VIENS ICI", MenuAction.CallHere, !m.Away);
+            Pill(4, 123, 46, 14, null, m.Asleep ? "RÉVEIL" : "DODO", MenuAction.SleepWake, !m.Away);
+            Pill(54, 123, 58, 14, null, "VIENS ICI", MenuAction.CallHere, !m.Away);
         }
 
         BottomBar(m);
@@ -283,29 +281,32 @@ public sealed class MenuPanel
     static void BandPage(MenuModel m)
     {
         TopBar("LA BANDE");
-        TextC(m.BandStatus, W / 2, 24, Dim);
+        TextC(m.BandStatus, W / 2, 22, Dim);
 
-        SmallTile(4, 35, 64, 20, Blue, Glyphs.IcoDice, "HASARD", MenuAction.SendRandom, m.CanSend);
-        SmallTile(72, 35, 64, 20, Amber, Glyphs.IcoSmallLetter, "UN MOT", MenuAction.SendNote, m.CanSend);
+        Pill(4, 32, 52, 13, Glyphs.IcoDice, "HASARD", MenuAction.SendRandom, m.CanSend);
+        Pill(60, 32, 52, 13, Glyphs.IcoSmallLetter, "UN MOT", MenuAction.SendNote, m.CanSend);
 
-        int y = 60;
-        int rows = m.GuestName is null ? 6 : 5;
-        if (m.Band.Count == 0) TextC("PERSONNE POUR L'INSTANT", W / 2, y + 30, Dim);
+        int y = 49;
+        int rows = m.GuestName is null ? 6 : 4;
+        if (m.Band.Count == 0)
+        {
+            TextC("PERSONNE POUR", W / 2, y + 30, Dim);
+            TextC("L'INSTANT", W / 2, y + 40, Dim);
+        }
         foreach (var b in m.Band.Take(rows))
         {
-            Fill(4, y, W - 8, 16, PixelCanvas.Rgb(246, 236, 212));
+            Fill(4, y, W - 8, 14, Stripe);
             var ic = new PixelCanvas(16, 16);
             SpeciesArt.DrawIcon(ic, b.Species);
-            Blit(ic, 5, y, b.Online ? 1f : 0.45f);
-            Text(PixelFont.Fit(b.Name.ToUpperInvariant(), 72), 24, y + 5, b.Online ? Ink : Dim, null);
-            if (b.Online) Dot(99, y + 7, Mint);
-            IconButton(104, y + 1, 14, 14, Glyphs.IcoSmallLetter, Blue, MenuAction.SendTo, b.Id, m.CanSend && b.Available);
-            IconButton(120, y + 1, 14, 14, Glyphs.IcoSmallBook, Grape, MenuAction.DeckOf, b.Id, true);
-            y += 17;
+            Blit(ic, 5, y - 1, b.Online ? 1f : 0.45f);
+            Text(PixelFont.Fit(b.Name.ToUpperInvariant(), 57), 24, y + 4, b.Online ? Ink : Dim, null);
+            IconBtn(85, y + 1, 12, 12, Glyphs.IcoSmallLetter, MenuAction.SendTo, b.Id, m.CanSend && b.Available);
+            IconBtn(98, y + 1, 12, 12, Glyphs.IcoSmallBook, MenuAction.DeckOf, b.Id, true);
+            y += 15;
         }
         if (m.GuestName is string g)
-            Pill(4, Footer - 18, W - 8, 15, Glyphs.IcoNo, PixelFont.Fit("BLOQUER " + g.ToUpperInvariant(), W - 30), MenuAction.BlockGuest, true, Cherry);
-        Pill(4, Footer, W - 8, 15, Glyphs.IcoGlobe, "LA BANDE EN LIGNE", MenuAction.BandPage, true, Sand);
+            Pill(4, Footer - 17, W - 8, 15, Glyphs.IcoNo, PixelFont.Fit("BLOQUER " + g.ToUpperInvariant(), W - 30), MenuAction.BlockGuest, true, danger: true);
+        Pill(4, Footer, W - 8, 15, Glyphs.IcoGlobe, "BANDE EN LIGNE", MenuAction.BandPage, true);
     }
 
     static void CarnetPage(MenuModel m)
@@ -320,7 +321,7 @@ public sealed class MenuPanel
         {
             var lines = PixelFont.Wrap(text, W - 44);
             if (y + Math.Min(2, lines.Count) * 9 > Footer - 4) break;
-            Text(stamp, 6, y, Blue, null);
+            Text(stamp, 6, y, Deep, null);
             for (int i = 0; i < Math.Min(2, lines.Count); i++)
             {
                 string l = i == 1 && lines.Count > 2 ? PixelFont.Fit(lines[1] + "…", W - 44) : lines[i];
@@ -329,16 +330,16 @@ public sealed class MenuPanel
             }
             y += 2;
         }
-        Pill(4, Footer, W - 8, 15, Glyphs.IcoGlobe, "CARNET EN LIGNE", MenuAction.CarnetPage, m.Registered, Sand);
+        Pill(4, Footer, W - 8, 15, Glyphs.IcoGlobe, "CARNET EN LIGNE", MenuAction.CarnetPage, m.Registered);
     }
 
     static void SettingsPage(MenuModel m)
     {
         TopBar("RÉGLAGES");
-        int y = 24;
-        Check(y, "DÉMARRAGE AUTO", m.Autostart, MenuAction.ToggleAutostart); y += 15;
-        Check(y, "VISITES SPONTANÉES", m.Spontaneous, MenuAction.ToggleSpontaneous); y += 15;
-        Check(y, "PETITS MOTS", m.Messages, MenuAction.ToggleMessages); y += 15;
+        int y = 23;
+        Check(y, "DÉMARRAGE AUTO", m.Autostart, MenuAction.ToggleAutostart); y += 14;
+        Check(y, "VISITES LIBRES", m.Spontaneous, MenuAction.ToggleSpontaneous); y += 14;
+        Check(y, "PETITS MOTS", m.Messages, MenuAction.ToggleMessages); y += 14;
         Check(y, "JEUX SPONTANÉS", m.MiniGames, MenuAction.ToggleMiniGames); y += 17;
 
         Text("TAILLE", 8, y + 4, Ink, null);
@@ -346,35 +347,34 @@ public sealed class MenuPanel
         for (int i = 0; i < 3; i++)
         {
             bool on = m.SizeLevel == i + 2;
-            ButtonBox(70 + i * 22, y, 20, 15, on ? Blue : Sand, MenuAction.Size, (i + 2).ToString(), true, out int ox, out int oy);
-            TextC(sizes[i], 70 + i * 22 + 10 + ox, y + 4 + oy, on ? White : Ink);
+            uint fg = Box(58 + i * 18, y, 16, 14, MenuAction.Size, (i + 2).ToString(), true, out int ox, out int oy, selected: on);
+            TextC(sizes[i], 58 + i * 18 + 8 + ox, y + 4 + oy, fg);
         }
-        y += 22;
-        Pill(4, y, W - 8, 15, Glyphs.IcoPencil, "RENOMMER", MenuAction.Rename, m.Registered, Amber);
+        y += 20;
+        Pill(4, y, W - 8, 15, Glyphs.IcoPencil, "RENOMMER", MenuAction.Rename, m.Registered);
         y += 19;
-        Pill(4, y, W - 8, 15, Glyphs.IcoCross, "QUITTER PÉPIN", MenuAction.Quit, true, Cherry);
-        TextC("VERSION " + m.Version, W / 2, Footer + 4, Dim);
+        Pill(4, y, W - 8, 15, Glyphs.IcoCross, "QUITTER PÉPIN", MenuAction.Quit, true, danger: true);
+        TextC("VERSION " + m.Version, W / 2, H - 13, Dim);
     }
 
     // ------------------------------------------------------------------ éléments
 
     static void TopBar(string title)
     {
-        Fill(1, 1, W - 2, 18, Sky);
-        HLine(0, 19, W, Ink);
-        IconButton(4, 3, 16, 14, Glyphs.IcoBack, Sand, MenuAction.Back, null, true);
-        TextC(title, W / 2 + 6, 7, Ink);
+        Fill(1, 1, W - 2, 17, Sky);
+        HLine(0, 18, W, Ink);
+        IconBtn(4, 3, 16, 13, Glyphs.IcoBack, MenuAction.Back, null, true);
+        Text(title, 26, 6, Ink, null);
     }
 
     static void BottomBar(MenuModel m)
     {
-        HLine(0, H - 22, W, Ink);
-        Fill(1, H - 21, W - 2, 20, Bar);
-        IconButton(5, H - 18, 16, 15, Glyphs.IcoGear, Sand, MenuAction.Go, nameof(MenuPage.Settings), true);
-        IconButton(24, H - 18, 16, 15, Glyphs.IcoNotebook, Sand, MenuAction.Go, nameof(MenuPage.Carnet), !m.Egg);
-        IconButton(43, H - 18, 16, 15, m.Paused ? Glyphs.IcoPlay : Glyphs.IcoPause, Sand, MenuAction.Pause, null, !m.Egg);
-        IconButton(62, H - 18, 16, 15, Glyphs.IcoCross, Cherry, MenuAction.Quit, null, true);
-        Text("V" + m.Version, W - 6 - PixelFont.Measure("V" + m.Version), H - 14, Dim, null);
+        HLine(0, H - 18, W, Ink);
+        Fill(1, H - 17, W - 2, 16, Bar);
+        IconBtn(4, H - 15, 16, 13, Glyphs.IcoGear, MenuAction.Go, nameof(MenuPage.Settings), true);
+        IconBtn(22, H - 15, 16, 13, Glyphs.IcoNotebook, MenuAction.Go, nameof(MenuPage.Carnet), !m.Egg);
+        IconBtn(40, H - 15, 16, 13, m.Paused ? Glyphs.IcoPlay : Glyphs.IcoPause, MenuAction.Pause, null, !m.Egg);
+        IconBtn(W - 20, H - 15, 16, 13, Glyphs.IcoCross, MenuAction.Quit, null, true, danger: true);   // à l'écart des autres
     }
 
     static void DrawPortrait(MenuModel m, int x, int y, int w, int h)
@@ -408,93 +408,82 @@ public sealed class MenuPanel
             }
     }
 
-    static void Gauge(int x, int y, string[] icon, uint? ink, double value, uint fill, int iconDy = 0)
+    /// <summary>Jauge : icône d'encre + barre fine (la couleur ne porte pas le sens, l'icône si).</summary>
+    static void Gauge(int x, int y, string[] icon, double value)
     {
-        if (ink is uint k) Glyphs.DrawTinted(cv!, icon, x, y + iconDy, k);
-        else Glyphs.DrawAt(cv!, icon, x, y + iconDy);
-        int bx = x + 9, bw = W - 6 - bx;
-        Fill(bx, y, bw, 6, Ink);
-        Fill(bx + 1, y + 1, bw - 2, 4, Track);
+        Glyphs.DrawTinted(cv!, icon, x, y, Ink);
+        int bx = x + 9, bw = W - 4 - bx;
+        Fill(bx, y, bw, 5, Ink);
+        Fill(bx + 1, y + 1, bw - 2, 3, Paper);
         int fw = (int)Math.Round((bw - 2) * Math.Clamp(value, 0, 1));
         if (fw > 0)
         {
-            Fill(bx + 1, y + 1, fw, 4, fill);
-            Fill(bx + 1, y + 1, fw, 1, PixelCanvas.Lerp(fill, White, 0.45f));
+            Fill(bx + 1, y + 1, fw, 3, Deep);
+            Fill(bx + 1, y + 1, fw, 1, PixelCanvas.Lerp(Deep, White, 0.45f));
         }
     }
 
-    /// <summary>Grosse tuile de jeu : icône en haut, nom en dessous, relief en bas.</summary>
-    static void Tile(int x, int y, int w, int h, uint col, string[] icon, string label, MenuAction a, string? arg, bool on)
-    {
-        ButtonBox(x, y, w, h, on ? col : Grey, a, arg, on, out int ox, out int oy);
-        int iw = icon[0].Length * 2, ih = icon.Length * 2;              // icônes doublées : gros pixels « jeu mobile »
-        int ix = x + (w - iw) / 2 + ox, iy = y + 3 + (20 - ih) / 2 + oy;
-        Big(icon, ix + 1, iy + 1, Darken(on ? col : Grey), solid: true);
-        Big(icon, ix, iy, on ? White : PixelCanvas.Rgb(225, 222, 218));
-        TextC(label, x + w / 2 + ox, y + h - 13 + oy, on ? White : PixelCanvas.Rgb(232, 230, 226), Darken(on ? col : Grey));
-        if (!on) Glyphs.DrawTinted(cv!, Glyphs.IcoLock, x + w - 9, y + 4, Dim);
-    }
-
-    static void SmallTile(int x, int y, int w, int h, uint col, string[] icon, string label, MenuAction a, bool on)
-    {
-        ButtonBox(x, y, w, h, on ? col : Grey, a, null, on, out int ox, out int oy);
-        int lw = PixelFont.Measure(label), iw = icon[0].Length, total = iw + 4 + lw;
-        int x0 = x + (w - total) / 2 + ox;
-        Shadowed(icon, x0, y + (h - 2 - icon.Length) / 2 + oy, White, Darken(on ? col : Grey));
-        Text(label, x0 + iw + 4, y + (h - 2 - 7) / 2 + oy, White, Darken(on ? col : Grey));
-    }
-
-    static void Pill(int x, int y, int w, int h, string[] icon, string label, MenuAction a, bool on, uint? col = null)
-    {
-        uint body = on ? col ?? Amber : Grey;
-        ButtonBox(x, y, w, h, body, a, null, on, out int ox, out int oy);
-        bool light = col is uint cc && cc != Amber && cc != Sand;
-        uint ink = light ? White : Ink;
-        int lw = PixelFont.Measure(label), iw = icon[0].Length, total = iw + 4 + lw;
-        int x0 = x + (w - total) / 2 + ox, ty = y + (h - 2 - 7) / 2 + oy;
-        Glyphs.DrawTinted(cv!, icon, x0, y + (h - 2 - icon.Length) / 2 + oy, ink);
-        Text(label, x0 + iw + 4, ty, ink, null);
-    }
-
-    static void IconButton(int x, int y, int w, int h, string[] icon, uint col, MenuAction a, string? arg, bool on)
-    {
-        ButtonBox(x, y, w, h, on ? col : Grey, a, arg, on, out int ox, out int oy);
-        bool light = col == Cherry || col == Blue || col == Grape;
-        Glyphs.DrawTinted(cv!, icon, x + (w - icon[0].Length) / 2 + ox, y + (h - 2 - icon.Length) / 2 + oy, light && on ? White : on ? Ink : Dim);
-    }
-
-    static void Check(int y, string label, bool on, MenuAction a)
-    {
-        ButtonBox(6, y, 12, 12, on ? Mint : Paper, a, null, true, out int ox, out int oy);
-        if (on)
-            foreach (var (dx, dy) in new[] { (3, 5), (4, 6), (5, 7), (6, 6), (7, 5), (8, 4) })
-                cv!.Set(6 + dx + ox, y + dy - 1 + oy, White, Layer.Fx);
-        Text(label, 22, y + 2, Ink, null);
-        // toute la ligne est cliquable
-        var b = bl[^1];
-        b.Wd = W - 12;
-        bl[^1] = b;
-    }
-
-    /// <summary>Bouton en relief : survol = plus clair et monte d'un pixel, appui = descend.</summary>
-    static void ButtonBox(int x, int y, int w, int h, uint col, MenuAction a, string? arg, bool on, out int ox, out int oy)
+    /// <summary>
+    /// Cadre cliquable : repos = crème bordé d'encre, survol = bleu ciel, appui = bleu plus foncé, `selected` = encre
+    /// pleine, indisponible = bord pâle. Renvoie la couleur du contenu ; `oy` : décalage d'1 pixel à l'appui.
+    /// </summary>
+    static uint Box(int x, int y, int w, int h, MenuAction a, string? arg, bool on, out int ox, out int oy,
+                    bool selected = false, bool danger = false)
     {
         int idx = bl.Count;
         bl.Add(new Btn { X = x, Y = y, Wd = w, Ht = h, A = a, Arg = arg, On = on });
         bool isHover = on && idx == hov, isPressed = on && idx == prs;
         ox = 0;
-        oy = isPressed ? 1 : isHover ? -1 : 0;
-        uint body = isHover ? PixelCanvas.Lerp(col, White, 0.18f) : col;
-        int depth = isPressed ? 1 : 2;
-        // ombre portée (relief) puis le dessus
-        RoundRect(x, y + oy + depth, w, h - depth, Darken(col), Ink, 2);
-        RoundRect(x, y + oy, w, h - depth, body, Ink, 2);
-        HLine(x + 2, y + oy + 1, w - 4, PixelCanvas.Lerp(body, White, 0.35f));
+        oy = isPressed ? 1 : 0;
+        uint fill = selected ? Ink
+            : isPressed ? SkyDark
+            : isHover ? (danger ? Cherry : Sky)
+            : Paper;
+        RoundRect(x, y, w, h, fill, on ? Ink : Track, 2);
+        if (!on) return Dim;
+        if (selected || (danger && isHover)) return White;
+        return danger ? Cherry : Ink;
+    }
+
+    /// <summary>Ligne d'action alignée à gauche : icône d'encre, nom ; petit cadenas quand c'est impossible.</summary>
+    static void Row(int x, int y, int w, int h, string[] icon, string label, MenuAction a, string? arg, bool on)
+    {
+        uint fg = Box(x, y, w, h, a, arg, on, out int ox, out int oy);
+        Glyphs.DrawTinted(cv!, icon, x + 5 + (9 - icon[0].Length) / 2 + ox, y + (h - icon.Length) / 2 + oy, fg);
+        Text(label, x + 19 + ox, y + (h - 7) / 2 + oy, fg, null);
+        if (!on) Glyphs.DrawTinted(cv!, Glyphs.IcoLock, x + w - 9, y + (h - 5) / 2, Dim);
+    }
+
+    /// <summary>Bouton centré : icône facultative + texte.</summary>
+    static void Pill(int x, int y, int w, int h, string[]? icon, string label, MenuAction a, bool on, bool danger = false)
+    {
+        uint fg = Box(x, y, w, h, a, null, on, out int ox, out int oy, danger: danger);
+        int lw = PixelFont.Measure(label), iw = icon?[0].Length ?? 0, total = iw + (icon is null ? 0 : 4) + lw;
+        int x0 = x + (w - total) / 2 + ox;
+        if (icon is not null) Glyphs.DrawTinted(cv!, icon, x0, y + (h - icon.Length) / 2 + oy, fg);
+        Text(label, x0 + (icon is null ? 0 : iw + 4), y + (h - 7) / 2 + oy, fg, null);
+    }
+
+    static void IconBtn(int x, int y, int w, int h, string[] icon, MenuAction a, string? arg, bool on, bool danger = false)
+    {
+        uint fg = Box(x, y, w, h, a, arg, on, out int ox, out int oy, danger: danger);
+        Glyphs.DrawTinted(cv!, icon, x + (w - icon[0].Length) / 2 + ox, y + (h - icon.Length) / 2 + oy, fg);
+    }
+
+    /// <summary>Case à cocher : pleine (encre + coche) quand c'est activé. Toute la ligne est cliquable.</summary>
+    static void Check(int y, string label, bool on, MenuAction a)
+    {
+        int idx = bl.Count;
+        bl.Add(new Btn { X = 4, Y = y, Wd = W - 8, Ht = 12, A = a, On = true });
+        if (idx == hov) Fill(4, y, W - 8, 12, Bar);
+        RoundRect(7, y + 1, 10, 10, on ? Ink : Paper, Ink, 2);
+        if (on)
+            foreach (var (dx, dy) in new[] { (2, 5), (3, 6), (4, 7), (5, 6), (6, 5), (7, 4) })
+                cv!.Set(7 + dx, y + 1 + dy, White, Layer.Fx);
+        Text(label, 22, y + 3, Ink, null);
     }
 
     // ------------------------------------------------------------------ primitives
-
-    static uint Darken(uint c) => PixelCanvas.Lerp(c, Ink, 0.3f);
 
     static void Fill(int x, int y, int w, int h, uint col)
     {
@@ -526,33 +515,6 @@ public sealed class MenuPanel
     static void TextC(string s, int cx, int y, uint col, uint? shadow = null) =>
         Text(s, cx - PixelFont.Measure(s) / 2, y, col, shadow);
 
-    /// <summary>Icône agrandie ×2 ; `solid` : tous ses pixels de la couleur `ink` (pour l'ombre).</summary>
-    static void Big(string[] icon, int x, int y, uint ink, bool solid = false)
-    {
-        var tmp = new PixelCanvas(icon[0].Length, icon.Length);
-        Glyphs.DrawTinted(tmp, icon, 0, 0, ink);
-        for (int yy = 0; yy < tmp.H; yy++)
-            for (int xx = 0; xx < tmp.W; xx++)
-            {
-                uint p = tmp.Px[yy * tmp.W + xx];
-                if (p >> 24 == 0) continue;
-                if (solid) p = ink;
-                for (int k = 0; k < 4; k++) cv!.Set(x + xx * 2 + k % 2, y + yy * 2 + k / 2, p, Layer.Fx);
-            }
-    }
-
-    static void Shadowed(string[] icon, int x, int y, uint ink, uint shadow)
-    {
-        Glyphs.DrawTinted(cv!, icon, x + 1, y + 1, shadow);
-        Glyphs.DrawTinted(cv!, icon, x, y, ink);
-    }
-
-    static void Dot(int x, int y, uint col)
-    {
-        Fill(x, y - 1, 3, 3, Ink);
-        cv!.Set(x + 1, y, col, Layer.Fx);
-    }
-
     static void Blit(PixelCanvas src, int x, int y, float alpha)
     {
         for (int yy = 0; yy < src.H; yy++)
@@ -560,7 +522,7 @@ public sealed class MenuPanel
             {
                 uint p = src.Px[yy * src.W + xx];
                 if (p >> 24 == 0) continue;
-                if (alpha < 1) p = PixelCanvas.Lerp(p, PixelCanvas.Rgb(246, 236, 212), 1 - alpha);
+                if (alpha < 1) p = PixelCanvas.Lerp(p, Stripe, 1 - alpha);
                 cv!.Set(x + xx, y + yy, p, Layer.Fx);
             }
     }
