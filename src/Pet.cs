@@ -236,8 +236,10 @@ public sealed class Pet
         if (sp > 3000) { vx *= 3000 / sp; vy *= 3000 / sp; sp = 3000; }
         VX = vx; VY = vy;
         VZ = sp < 150 ? 0 : 150 + Math.Min(sp * 0.12, 300);
+        bool bowling = sp >= 150 && Bowl is { Ready: true };
+        if (bowling) { Z = 3 * Scale; VZ = 0; }       // au bowling elle roule au sol comme une boule (sinon elle vole par-dessus les quilles)
         Switch(new Thrown(sp));
-        if (sp >= 150) Bowl?.NoteThrow();     // un vrai lancer en carapace compte pour le bowling
+        if (bowling) Bowl!.NoteThrow();               // un vrai lancer en carapace compte pour le bowling
     }
 
     // ------------------------------------------------------------------ cerveau

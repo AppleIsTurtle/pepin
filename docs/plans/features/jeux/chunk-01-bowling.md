@@ -22,6 +22,13 @@ de dev) ; `dotnet run -- --preview` simule un lancer et en dessine les images ; 
 - Le décor est derrière la tortue même quand elle passe « derrière » les quilles (pas de tri en profondeur avec elle)
 - Les quilles sont dessinées dans une toile de 70×68 px logiques ; le lancer à ~700 px/s atteint la quille de tête à 100 %
 
+## Correctif du 2026-10-01 (premier essai en vrai : « rien ne se passe »)
+Le lancer normal est un vol (saut de 150-450 px/s) : à 800-1800 px/s la tortue passait au-dessus des quilles et
+retombait loin derrière (0 quille sur 15 lancers simulés). Corrigé : au bowling elle **roule au sol** (`Pet.OnRelease`,
+`Bowling.Ready`) et la collision teste **tout le segment parcouru** depuis l'image précédente (à 40 images/s elle avance
+de plus de 40 px par image et traversait une quille sans la toucher). `--preview` simule maintenant 15 vrais lancers
+(vitesse × angle) et affiche les quilles tombées : sous ~700 px/s elle s'arrête avant la piste (raté), au-delà ça touche.
+
 ## À vérifier à la première compilation
 1. (fait) Ça compile ; `--preview` montre les quilles qui tombent pour un lancer au centre
 2. Menu Jeux → Bowling : elle va se placer, les quilles tombent, « Lance-moi ! »

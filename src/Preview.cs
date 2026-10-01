@@ -73,6 +73,24 @@ public static class Preview
         }
         strip.SavePng(Path.Combine(dir, "bowling.png"), 4, Bg);
         Console.WriteLine($"quilles tombées : {b.Fell} (lancers : {b.Throws}), phase {b.Phase}");
+
+        // vrais lancers : même chemin que la souris (OnRelease), à plusieurs vitesses et avec un peu d'angle
+        Console.WriteLine("lancer (px/s, angle) -> quilles tombées");
+        foreach (double speed in new[] { 500.0, 800, 1200, 1800, 2500 })
+            foreach (double dy in new[] { 0.0, 0.08, -0.15 })
+            {
+                var gb = new Bowling(new Overlay());
+                var gp = new Pet(mood, new Senses { Work = work, CursorOnSameMonitor = true }, new Idle()) { Scale = 3, X = 600, Y = 700, Bowl = gb };
+                gb.TryStart(gp);
+                gb.Begin();
+                for (double t = 0; t < 3 && gb.Phase != BowlPhase.Wait; t += dt) gb.Tick(dt, gp, 3, 0);
+                var (gx, gy) = gb.Start;
+                gp.X = gx; gp.Y = gy;
+                gp.OnGrab();
+                gp.OnRelease(gb.Dir * speed, speed * dy);
+                for (double t = 0; t < 6; t += dt) { gp.Update(dt); gb.Tick(dt, gp, 3, 0); if (gb.Phase == BowlPhase.Over) break; }
+                Console.WriteLine($"  {speed,5:0} {dy,5:0.00} -> {gb.Fell} (phase {gb.Phase}, lancers {gb.Throws})");
+            }
         Console.WriteLine($"écrit dans {Path.GetFullPath(dir)}");
         return 0;
     }

@@ -51,10 +51,13 @@ public sealed class Bowling
     double s = 3, dir, rx, ry, sx, sy, winLeft, winTop, xMin, xMax, yMin, yMax;
     double life, waitT;
     nint home;
+    double prevX, prevY;                  // position de la carapace à l'image précédente (collisions sur le trajet)
+    bool hasPrev;
 
     public BowlPhase Phase { get; private set; }
     public bool Active => Phase is >= BowlPhase.Prep and <= BowlPhase.Throw;
     public bool Throwing => Phase == BowlPhase.Throw;
+    public bool Ready => Phase == BowlPhase.Wait;           // les quilles sont posées : le prochain lancer compte
     public bool Abandoned { get; private set; }
     public bool RoundOver { get; private set; }
     public int Throws { get; private set; }
@@ -215,7 +218,8 @@ public sealed class Bowling
             if (p.Y > yMax) { p.Y = yMax; p.VY = -Math.Abs(p.VY) * 0.5; }
         }
 
-        if (Phase == BowlPhase.Throw && pet.Current is Thrown && pet.Z < 6 * s) HitByTurtle(pet);
+        if (Phase == BowlPhase.Throw && pet.Current is Thrown && pet.Z < 8 * s) HitByTurtle(pet);
+        else hasPrev = false;
 
         // quilles contre quilles : une quille qui file en renverse d'autres
         double min = 6.2 * s;
@@ -247,11 +251,18 @@ public sealed class Bowling
     void HitByTurtle(Pet pet)
     {
         double tvx = pet.VX, tvy = pet.VY, sp = Math.Sqrt(tvx * tvx + tvy * tvy);
+        double bx = pet.X, by = pet.Y - 3 * s;
+        // on teste tout le segment parcouru depuis la dernière image : à 2000 px/s elle avance de 40+ px par image
+        double ax = hasPrev ? prevX : bx, ay = hasPrev ? prevY : by;
+        prevX = bx; prevY = by; hasPrev = true;
         if (sp < 90) return;
-        double cx = pet.X, cy = pet.Y - 3 * s, thr = (6.5 + 2.5) * s;
+        double thr = (6.5 + 2.5) * s;
+        double sx = bx - ax, sy = by - ay, len2 = sx * sx + sy * sy;
         foreach (var p in pins)
         {
             if (p.Vanish > 0 || p.Pop < 1) continue;
+            double u = len2 > 0.01 ? Math.Clamp(((p.X - ax) * sx + (p.Y - ay) * sy) / len2, 0, 1) : 1;
+            double cx = ax + sx * u, cy = ay + sy * u;          // point du trajet le plus proche de la quille
             double dx = p.X - cx, dy = p.Y - cy, d2 = dx * dx + dy * dy;
             if (d2 >= thr * thr) continue;
             double d = Math.Sqrt(d2), nx = d > 0.1 ? dx / d : tvx / sp, ny = d > 0.1 ? dy / d : tvy / sp;
