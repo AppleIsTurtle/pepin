@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Pepin</RootNamespace>
+    <ApplicationIcon>Pepin.ico</ApplicationIcon>
+    <Product>PÃ©pin</Product>
+    <AssemblyTitle>PÃ©pin, compagnon de bureau</AssemblyTitle>
+    <Description>PÃ©pin, compagnon de bureau</Description>
+    <Company>pommetortue.tech</Company>
+    <Version>2.0.1</Version>
+    <AssemblyName>Pepin</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Exe natif autonome, le plus lÃ©ger possible -->
+    <PublishAot>true</PublishAot>
+    <OptimizationPreference>Size</OptimizationPreference>
+    <StackTraceSupport>false</StackTraceSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+    <DebuggerSupport>false</DebuggerSupport>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <ServerGarbageCollector>false</ServerGarbageCollector>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+</Project>

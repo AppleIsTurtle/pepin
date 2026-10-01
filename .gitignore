@@ -1,0 +1,15 @@
+# Sorties de compilation (build.ps1 les régénère ; l'exe est distribué via deploy-friend.sh, pas via git)
+bin/
+obj/
+publish/
+
+# Serveur "la bande" : environnement Python, caches, base de données locale
+server/.venv/
+server/.pytest_cache/
+server/data/
+__pycache__/
+*.pyc
+
+# Fichiers temporaires
+*.tmp
+*.log
