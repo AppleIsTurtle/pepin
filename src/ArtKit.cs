@@ -304,6 +304,9 @@ public static class ArtKit
                         G1(Glyphs.SmallStar, sx, sy - (int)(ph * 3));
                     }
                     break;
+                case FxKind.Impact:
+                    Impact(hx + 5, hy - 2, p, e.Value);
+                    break;
                 case FxKind.Tear:
                     G1(Glyphs.Tear, hx - 1, hy + 3 + (int)(p * 4));
                     break;
@@ -354,6 +357,45 @@ public static class ArtKit
     {
         float a = p * 6.283f;
         return (hx + 11 + (int)MathF.Round(MathF.Cos(a) * 6), hy - 11 + (int)MathF.Round(MathF.Sin(a * 2) * 3));
+    }
+
+    static readonly uint Orange = Rgb(250, 140, 30), Fire = Rgb(255, 214, 64), Ember = Rgb(190, 40, 40);
+
+    /// <summary>
+    /// Choc entre deux compagnons : une explosion en étoile qui gonfle et se dissipe (blanc au cœur, jaune, orange, rouge au bord),
+    /// puis des étincelles qui filent en tous sens. `p` : 0..1 pour tout le choc, `power` : taille (1 = normal).
+    /// </summary>
+    public static void Impact(int cx, int cy, float p, float power)
+    {
+        if (p >= 1f) return;
+        if (p < 0.6f)
+        {
+            float k = p < 0.2f ? p / 0.2f : 1 - (p - 0.2f) / 0.4f;           // gonfle vite, puis se résorbe
+            float big = (3f + 8f * Math.Clamp(k, 0f, 1f)) * Math.Clamp(power, 0.4f, 1.6f);
+            int r = (int)MathF.Ceiling(big) + 1;
+            for (int dy = -r; dy <= r; dy++)
+                for (int dx = -r; dx <= r; dx++)
+                {
+                    float d = MathF.Sqrt(dx * dx + dy * dy);
+                    float edge = big * (0.55f + 0.45f * MathF.Abs(MathF.Cos(MathF.Atan2(dy, dx) * 4 + p * 2)));   // huit pointes
+                    if (d > edge) continue;
+                    float t = d / edge;
+                    uint col = t < 0.3f ? Glyphs.White : t < 0.6f ? Fire : t < 0.85f ? Orange : Ember;
+                    B(cx + dx, cy + dy, col, Layer.Fx);
+                }
+        }
+        if (p > 0.15f)
+        {
+            float q = (p - 0.15f) / 0.85f;
+            for (int j = 0; j < 8; j++)
+            {
+                if ((j + (int)(q * 14)) % 3 == 0) continue;                  // elles scintillent
+                float a = j * 0.785f + 0.39f, r = (5 + q * 11) * Math.Clamp(power, 0.6f, 1.4f);
+                int sx = cx + (int)MathF.Round(MathF.Cos(a) * r), sy = cy + (int)MathF.Round(MathF.Sin(a) * r * 0.8f);
+                B(sx, sy, j % 2 == 0 ? Glyphs.White : Fire, Layer.Fx);
+                if (q < 0.7f) B(sx - (int)MathF.Round(MathF.Cos(a) * 2), sy - (int)MathF.Round(MathF.Sin(a) * 1.6f), Orange, Layer.Fx);
+            }
+        }
     }
 
     public static void Crumb(int sx, int sy) => c.Set(MX(sx), MY(sy), Rgb(205, 160, 90), Layer.Fx);

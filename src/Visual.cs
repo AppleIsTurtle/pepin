@@ -11,6 +11,7 @@ public enum FxKind : byte
     ShellHat,   // morceau de coquille sur la tête (éclosion) ; Value > 0 : il s'envole
     Fly,        // mouche qui tourne autour de la tête (grenouille)
     Tongue,     // langue tirée vers la mouche : Value = longueur 0..1
+    Impact,     // choc entre deux compagnons : explosion puis étincelles ; Phase 0..1 = tout le choc, Value = force
 }
 
 public enum Snack : byte { Lettuce, Strawberry, Heart }

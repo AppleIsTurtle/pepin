@@ -301,14 +301,15 @@ def test_regles_eligibilite(client, horloge):
     battement(client, a, horloge)
     battement(client, c, horloge)
     assert visiter(client, a, b).json() == {"error": "indisponible"}
-    # déjà occupée (c reçoit a) : b ne peut pas aller chez c
+    # pas de limite côté hôte : c reçoit a et b en même temps
     battement(client, b, horloge)
     assert visiter(client, a, c).status_code == 201
-    assert visiter(client, b, c).json() == {"error": "indisponible"}
+    assert visiter(client, b, c).status_code == 201
     # a est déjà en visite
     assert visiter(client, a, b).json() == {"error": "deja_en_visite"}
-    # a est visiteur : b ne peut pas aller chez a non plus
-    assert visiter(client, b, a).json() == {"error": "indisponible"}
+    # a est visiteur (elle n'est plus chez elle) : une autre tortue ne peut pas aller chez a
+    d = inscrire(client)
+    assert visiter(client, d, a).json() == {"error": "indisponible"}
 
 
 def test_visite_au_hasard_personne(client, horloge):
@@ -342,18 +343,22 @@ def sql_ecrire(x, y, pts):
     c.close()
 
 
-def test_limite_visites_par_heure(client, horloge):
+def test_aucune_limite_de_visites(client, horloge):
     a, b = inscrire(client), inscrire(client)
-    for _ in range(6):
+    for _ in range(12):
         v = visiter(client, a, b).json()["visit"]
         assert client.post(f"/api/visit/{v['id']}/abort", headers=a["h"]).status_code == 200
         battement(client, b, horloge)  # garde l'hôte en ligne
-    r = visiter(client, a, b)
-    assert r.status_code == 429 and r.json() == {"error": "trop_de_visites"}
-    horloge.avance(3600)
-    battement(client, b, horloge)
     assert visiter(client, a, b).status_code == 201
 
+
+def test_hote_recoit_autant_de_visiteurs_que_voulu(client, horloge):
+    hote = inscrire(client)
+    visiteurs = [inscrire(client) for _ in range(25)]
+    battement(client, hote, horloge)
+    for v in visiteurs:
+        r = visiter(client, v, hote)
+        assert r.status_code == 201 and r.json()["visit"]["host"]["id"] == hote["id"]
 
 def test_annulation_par_hote(client, horloge):
     a, b = inscrire(client), inscrire(client)
@@ -576,6 +581,16 @@ def test_page_bande(client, horloge):
         assert f'href="/friend/t/{t["id"]}"' in h
     assert h.count('class="dot on"') == 1 and "Nouveau venu" in h
     assert 'href="/friend/"' in h
+
+
+def test_discord_redirige_vers_l_invitation(client, monkeypatch):
+    r = client.get("/discord", follow_redirects=False)
+    assert r.status_code == 404 and "arrive bientôt" in r.text
+    monkeypatch.setenv("DISCORD_INVITE", "https://discord.gg/abc123")
+    r = client.get("/discord", follow_redirects=False)
+    assert r.status_code == 302 and r.headers["location"] == "https://discord.gg/abc123"
+    monkeypatch.setenv("DISCORD_INVITE", "https://evil.example/x")      # seules les invitations Discord passent
+    assert client.get("/discord", follow_redirects=False).status_code == 404
 
 
 def test_page_bande_vide(client):

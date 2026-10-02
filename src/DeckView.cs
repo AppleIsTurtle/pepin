@@ -3,7 +3,7 @@ namespace Pepin;
 /// <summary>
 /// La collection d'une tortue (la nôtre ou celle d'une amie de la bande) : une carte en pixel-art, 16 cases,
 /// les objets qu'elle n'a pas encore en silhouette. Un petit ★ signale ce qu'elle a et que nous n'avons pas.
-/// Un clic ferme la carte.
+/// Un clic ferme la carte (et <see cref="Dismissed"/> ramène le menu).
 /// </summary>
 public sealed class DeckView
 {
@@ -18,10 +18,13 @@ public sealed class DeckView
 
     public bool Visible => ov.Visible;
 
+    /// <summary>La carte vient d'être fermée d'un clic (pas à l'expiration) : l'appli rouvre le menu.</summary>
+    public Action? Dismissed;
+
     public void Create(nint inst)
     {
         ov.Create(inst);
-        ov.Click = Hide;
+        ov.Click = () => { Hide(); Dismissed?.Invoke(); };
     }
 
     public void Hide() => ov.Hide();
@@ -33,12 +36,13 @@ public sealed class DeckView
     }
 
     /// <param name="mine">Notre collection, pour repérer ce que l'autre a et pas nous (null = c'est la nôtre).</param>
+    /// <param name="cx">Centre voulu (pixels écran) : celui du menu, pour que la carte s'ouvre au même endroit.</param>
     public void Show(string name, string subtitle, IReadOnlyDictionary<string, int> collection,
-                     IReadOnlyDictionary<string, int>? mine, Species species, RECT work, int scale)
+                     IReadOnlyDictionary<string, int>? mine, Species species, RECT work, int scale, int cx, int cy)
     {
         canvas = Render(name, subtitle, collection, mine, species);
-        int x = work.Left + (work.Right - work.Left - CW * scale) / 2;
-        int y = work.Top + (work.Bottom - work.Top - CH * scale) / 2;
+        int x = Math.Clamp(cx - CW * scale / 2, work.Left + 4, Math.Max(work.Left + 4, work.Right - CW * scale - 4));
+        int y = Math.Clamp(cy - CH * scale / 2, work.Top + 4, Math.Max(work.Top + 4, work.Bottom - CH * scale - 4));
         ov.Present(canvas, scale, x, y);
         shownAt = App.Now;
     }
@@ -102,7 +106,7 @@ public sealed class DeckView
         int have = 0;
         foreach (var it in items) if (col.GetValueOrDefault(Items.Id(it)) > 0) have++;
         PixelFont.DrawCentered(c, $"{have}/{items.Length} DECOUVERTS", CW / 2, CH - 19, ink);
-        PixelFont.DrawCentered(c, "CLIC POUR FERMER", CW / 2, CH - 10, dim);
+        PixelFont.DrawCentered(c, "CLIC POUR REVENIR", CW / 2, CH - 10, dim);
         return c;
     }
 }

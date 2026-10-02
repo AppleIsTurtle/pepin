@@ -10,5 +10,6 @@ services:
       - ./data:/data
     environment:
       - DB_PATH=/data/bande.db
+      - DISCORD_INVITE=${DISCORD_INVITE:-}
     mem_limit: 128m
     cpus: 0.5

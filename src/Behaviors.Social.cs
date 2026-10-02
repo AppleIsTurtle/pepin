@@ -170,7 +170,9 @@ sealed class Arrive : SlideIn
     {
         var host = p.Partner!;
         bool left = host.X - p.S.Work.Left < p.S.Work.Right - host.X;
-        Enter(p, host.X + (left ? -50 : 50) * p.Scale, host.Y);
+        if (p.Slot % 2 == 1) left = !left;                     // les visiteurs suivants se répartissent des deux côtés
+        int gap = 50 + 34 * ((p.Slot + 1) / 2);
+        Enter(p, host.X + (left ? -gap : gap) * p.Scale, host.Y);
     }
     public override void Tick(Pet p, double dt)
     {
@@ -282,7 +284,7 @@ sealed class Sniff : Duo
 }
 
 /// <summary>Chat : celui qui « l'est » poursuit l'autre ; quand il le touche, les rôles s'inversent.</summary>
-sealed class TagState { public Pet? It; public double SwapAt = -10; }
+sealed class TagState { public Pet? It; public double SwapAt = -10; }   // SwapAt : horloge de l'appli (commune aux deux tortues)
 
 sealed class TagGame : Duo
 {
@@ -297,15 +299,21 @@ sealed class TagGame : Duo
         var v = p.V;
         if (p.Partner is not Pet q || T > dur) { Done = true; return; }
         v.Mouth = Mouth.Grin;
+        double since = App.Now - st.SwapAt;
+        if (since < 0.7)
+        {
+            // le choc : explosion et étincelles sur les deux, celui qui vient d'être touché en voit des étoiles
+            v.Add(FxKind.Impact, (float)(since / 0.7));
+            if (st.It == p) { v.Eyes = Eyes.Spiral; v.Mouth = Mouth.Oh; v.Add(FxKind.Stars, (float)(since * 2)); return; }
+        }
         if (st.It == p)
         {
             v.Eyes = Eyes.Determined;
             p.WalkTo(q.X, q.Y, 17, dt);
             double dx = q.X - p.X, dy = q.Y - p.Y;
-            if (dx * dx + dy * dy < 30 * 30 * p.Scale * p.Scale && p.Time - st.SwapAt > 1.2)
+            if (dx * dx + dy * dy < 30 * 30 * p.Scale * p.Scale && App.Now - st.SwapAt > 1.2)
             {
-                st.It = q; st.SwapAt = p.Time;
-                v.Add(FxKind.Exclaim, 0);
+                st.It = q; st.SwapAt = App.Now;                  // touché : choc, étincelles
             }
         }
         else

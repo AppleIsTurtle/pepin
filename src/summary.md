@@ -44,12 +44,12 @@ Plans : chunks 01-06 dans `docs/plans/`, v2 dans `docs/plans/features/` (mise-a-
 | `Behaviors.Species.cs` | comportements propres : `SniffGround` (hérisson), `CatchFly`, `Croak` (grenouille) | Pet | especes-menu/04-05 |
 | `Behaviors.Games.cs` | `BowlSetup`, `BowlWait`, `BowlReact`, `NoticeTuft`, `WatchCritter` | Pet, Bowling, Grass | jeux/01-02 |
 | `Grass.cs` | évènement « touffe d'herbe » : pousse, clic = rien / objet / petite bête | Overlay, Glyphs, Life | jeux/02 |
-| `MenuPanel.cs` | menu en panneau pixel art (accueil à tuiles, pages Bande, Carnet, Réglages), survol/appui/pop d'ouverture, se ferme au clic dehors ou Échap ; `MenuModel` = instantané affiché | Overlay, PixelFont, Glyphs, SpeciesArt | especes-menu/02 |
-| `DeckView.cs` | carte de collection (la nôtre ou celle d'un autre compagnon), 16 cases, tête de l'espèce dans le coin | Overlay, PixelFont, Glyphs | jeux/03 |
+| `MenuPanel.cs` | menu en panneau pixel art (bandeau Discord, accueil à tuiles groupées jouer / visiter / collection / soins, pages Bande, Carnet, Réglages ; `Bounds`/`Reopen` pour y revenir depuis la collection), survol/appui/pop d'ouverture, se ferme au clic dehors ou Échap ; `MenuModel` = instantané affiché | Overlay, PixelFont, Glyphs, SpeciesArt | especes-menu/02 |
+| `DeckView.cs` | carte de collection (la nôtre ou celle d'un autre compagnon), 16 cases, tête de l'espèce dans le coin ; s'ouvre au centre du menu et le rouvre à la fermeture | Overlay, PixelFont, Glyphs | jeux/03 |
 | `PixelFont.cs` | police pixel-art en capitales accentuées pour les cartes | PixelCanvas | jeux/03 |
 | `Preview.cs` | outil de dev `--preview` : PNG de la carte, de l'herbe, d'un lancer de bowling simulé et des pages du menu (`menu.png`, `menu-etats.png`) | DeckView, Grass, Bowling | jeux |
 | `Egg.cs` | première installation : œuf qui tombe, tremble, se fissure à chaque tape (3-5), éclosion (gonfle, flash, éclats, rayons, bannière « C'est un… ») ; `DrawShell`/`DrawIcon` pour le menu et l'icône | Overlay, PixelFont, Glyphs, Species | especes-menu/03 |
-| `Visit.cs` | `HostVisit` : orchestration d'une visite reçue (arrivée, programme d'activités, au revoir, souvenir, fin) ; le visiteur garde son espèce | Creature, Band, Label | bande/02 |
+| `Visit.cs` | `HostVisit` : visites reçues, sans limite de nombre (`Live` ; au-delà de `MaxShown` fenêtres les visiteurs « font foule » sans fenêtre) ; notre tortue joue avec un seul visiteur à la fois (`holder`), les autres se promènent ; arrivée, programme d'activités, au revoir, souvenir, fin ; le visiteur garde son espèce | Creature, Band, Label | bande/02 |
 | `Band.cs` | client de la bande : thread réseau, inscription, heartbeat + évènements acquittés (avec l'espèce, `SpeciesCode`), visites, renommer, bloquer, carnet ; DTO JSON (source generator) | Updater (Net) | bande/02 |
 | `Updater.cs` | `Net` (HttpClient partagé), mise à jour auto : `version.json`, SHA-256, remplacement de l'exe, relance | — | mise-a-jour |
 | `SheetRenderer.cs` | outils de dev : planche PNG (`--sheet`), sprites et objets transparents pour le site (`--frames`) | TurtleArt | 02, 06 |

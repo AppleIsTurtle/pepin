@@ -5,7 +5,7 @@ tortues, pages publiques. Plan : [../docs/plans/features/bande/chunk-01-serveur.
 
 | Fichier | Rôle | Dépendances |
 |---|---|---|
-| `app.py` | app FastAPI : limite de corps 32 Ko, auth Bearer, limites de débit, `/api/*`, routes des pages, horloge `now()` remplaçable en test | db, pages, catalogue |
+| `app.py` | app FastAPI : limite de corps 32 Ko, auth Bearer, limites de débit, `/api/*`, `/discord` (redirige vers `DISCORD_INVITE`), routes des pages, horloge `now()` remplaçable en test | db, pages, catalogue |
 | `db.py` | schéma, `connect()`, `init()` (WAL + `migrer()` : colonne `species`, v3), `tx()` en `BEGIN IMMEDIATE`, lecture ; `DB_PATH` depuis l'env | sqlite3 |
 | `pages.py` | `/t/{id}` (carnet, portrait de l'espèce) et `/bande` (mini-portraits), CSS inline autorisée par empreinte CSP, dates en français (heure de Paris calculée sans base tz) ; `sprite(espece)` : tortue à la racine de `/friend/img/`, les autres dans `/friend/img/<espece>/` | db, catalogue |
 | `catalogue.py` | noms aléatoires, souvenirs, activités, paliers (palier 0 « Nouveau venu »), espèces (`ESPECES`), libellés des stats | — |
@@ -44,3 +44,4 @@ Images `/friend/img/` (dont `items/<souvenir>.png`) servies par nginx. Sauvegard
   (`TROUVAILLES`, `COLLECTION`), `GET /api/turtle/{id}` (feature jeux).
 - 2026-09-30 : création (feature bande, chunk 01).
 - 2026-10-01 : `GET /api/public/band` pour afficher la bande et les liens vers les carnets sur /friend/.
+- 2026-10-02 : visite au hasard à tirage uniforme parmi toutes les tortues en ligne ; plus de limite de visites par heure ni d'hôte « occupé » (un hôte reçoit autant de visiteurs qu'il veut) ; route `/discord`.

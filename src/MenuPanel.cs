@@ -9,7 +9,7 @@ public enum MenuAction : byte
     None, Go, Back,
     Bowling, Grass, Collection, SleepWake, CallHere, Pause, Quit,
     SendRandom, SendNote, SendTo, DeckOf, BlockGuest, BandPage, CarnetPage,
-    ToggleAutostart, ToggleSpontaneous, ToggleMessages, ToggleMiniGames, Size, Rename,
+    ToggleAutostart, ToggleSpontaneous, ToggleMessages, ToggleMiniGames, Size, Rename, Discord,
 }
 
 /// <summary>Un membre de la bande tel que le menu l'affiche.</summary>
@@ -32,6 +32,7 @@ public sealed class MenuModel
     public string BandStatus = "";
     public List<BandEntry> Band = [];
     public string? GuestName;
+    public int Guests;                             // visiteurs chez nous en ce moment
     public List<(string stamp, string text)> Journal = [];
 }
 
@@ -42,7 +43,7 @@ public sealed class MenuModel
 /// </summary>
 public sealed class MenuPanel
 {
-    public const int W = 140, H = 190;
+    public const int W = 140, H = 226;
     const double OpenAnim = 0.18;
 
     struct Btn
@@ -61,12 +62,18 @@ public sealed class MenuPanel
     int hover = -1, pressed = -1;
     double openedAt;
     int baseX, baseY, scale;
+    POINT lastAnchor;
+    RECT lastWork;
+    bool lastAbove;
     public double ClosedAt = -10;
 
     /// <summary>Fournit l'état à afficher (appelé à chaque rafraîchissement).</summary>
     public Func<MenuModel>? Model;
     /// <summary>Action choisie ; le menu se ferme avant l'appel sauf pour la navigation et les cases à cocher.</summary>
     public Action<MenuAction, string?>? Act;
+
+    /// <summary>Où le panneau s'est ouvert en dernier (pixels écran) : la collection s'ouvre au même endroit.</summary>
+    public (int X, int Y, int W, int H, int Scale) Bounds => (baseX, baseY, W * scale, H * scale, scale);
 
     public bool Visible => ov?.Visible == true;
     public nint Hwnd => ov?.Hwnd ?? 0;
@@ -78,12 +85,14 @@ public sealed class MenuPanel
     public void Open(POINT anchor, RECT work, int pixelScale, bool aboveAnchor)
     {
         Close();
+        lastAnchor = anchor; lastWork = work; lastAbove = aboveAnchor;
         ov = new Overlay(clickable: true, activatable: true);
         ov.Create(inst);
         ov.Mouse = OnMouse;
         page = MenuPage.Home;
         hover = pressed = -1;
         scale = pixelScale;
+        while (scale > 1 && H * scale > work.Bottom - work.Top - 8) scale--;      // petit écran : on rétrécit plutôt que de couper
         int w = W * scale, h = H * scale;
         int x = anchor.X - w / 2;
         int y = aboveAnchor ? anchor.Y - h - 4 * scale : anchor.Y - h;
@@ -94,6 +103,15 @@ public sealed class MenuPanel
         SetForegroundWindow(ov.Hwnd);
         SetTimer(ov.Hwnd, 2, 15, 0);
     }
+
+    /// <summary>Rouvre le panneau là où il était (retour de la collection), sur la page demandée.</summary>
+    public void Reopen(MenuPage p)
+    {
+        Open(lastAnchor, lastWork, lastScale(), lastAbove);
+        if (p != MenuPage.Home) Go(p);
+    }
+
+    int lastScale() => scale;
 
     public void Close()
     {
@@ -203,7 +221,7 @@ public sealed class MenuPanel
         Coral = PixelCanvas.Rgb(240, 112, 92), Leaf = PixelCanvas.Rgb(104, 186, 78), Blue = PixelCanvas.Rgb(86, 148, 230),
         Grape = PixelCanvas.Rgb(166, 108, 210), Amber = PixelCanvas.Rgb(250, 196, 72), Sand = PixelCanvas.Rgb(214, 198, 166),
         Cherry = PixelCanvas.Rgb(222, 74, 84), HeartCol = PixelCanvas.Rgb(242, 104, 140), BoltCol = PixelCanvas.Rgb(246, 186, 40),
-        Berry = PixelCanvas.Rgb(232, 66, 72), Mint = PixelCanvas.Rgb(92, 196, 120);
+        Berry = PixelCanvas.Rgb(232, 66, 72), Mint = PixelCanvas.Rgb(92, 196, 120), Blurple = PixelCanvas.Rgb(88, 101, 242);
 
     const int Footer = H - 19;               // bouton du bas des sous-pages
 
@@ -245,39 +263,62 @@ public sealed class MenuPanel
 
     static void Home(MenuModel m)
     {
-        // bandeau du haut : ciel + portrait
-        Fill(1, 1, W - 2, 52, Sky);
-        Fill(1, 50, W - 2, 3, SkyDark);
-        HLine(0, 53, W, Ink);
-        RoundRect(5, 5, 44, 44, Paper, Ink, 2);
-        Fill(6, 38, 42, 10, PixelCanvas.Rgb(178, 226, 132));       // un bout d'herbe sous ses pieds
-        DrawPortrait(m, 6, 6, 42, 42);
+        Banner(m);
 
-        Text(PixelFont.Fit(m.Name.ToUpperInvariant(), W - 60), 54, 7, Ink, White);
+        // bandeau du haut : ciel + portrait
+        const int o = 28;
+        HLine(0, o, W, Ink);
+        Fill(1, o + 1, W - 2, 52, Sky);
+        Fill(1, o + 50, W - 2, 3, SkyDark);
+        HLine(0, o + 53, W, Ink);
+        RoundRect(5, o + 5, 44, 44, Paper, Ink, 2);
+        Fill(6, o + 38, 42, 10, PixelCanvas.Rgb(178, 226, 132));   // un bout d'herbe sous ses pieds
+        DrawPortrait(m, 6, o + 6, 42, 42);
+
+        Text(PixelFont.Fit(m.Name.ToUpperInvariant(), W - 60), 54, o + 7, Ink, White);
         for (int i = 0; i < 4; i++)
-            Glyphs.DrawTinted(cv!, Glyphs.StarShape, 54 + i * 7, 17, i < m.Tier ? BoltCol : PixelCanvas.Rgb(110, 150, 175));
-        Gauge(54, 27, Glyphs.Heart, null, m.Affection, HeartCol);
-        Gauge(54, 35, Glyphs.IcoBolt, BoltCol, m.Energy, BoltCol);
-        Gauge(54, 43, Glyphs.Strawberry, null, m.Belly, Berry, iconDy: -1);
+            Glyphs.DrawTinted(cv!, Glyphs.StarShape, 54 + i * 7, o + 17, i < m.Tier ? BoltCol : PixelCanvas.Rgb(110, 150, 175));
+        Gauge(54, o + 27, Glyphs.Heart, null, m.Affection, HeartCol);
+        Gauge(54, o + 35, Glyphs.IcoBolt, BoltCol, m.Energy, BoltCol);
+        Gauge(54, o + 43, Glyphs.Strawberry, null, m.Belly, Berry, iconDy: -1);
 
         if (m.Egg)
         {
-            TextC("UN ŒUF MYSTÈRE...", W / 2, 66, Ink);
-            TextC("TAPOTE-LE POUR", W / 2, 84, Dim);
-            TextC("QU'IL ÉCLOSE !", W / 2, 94, Dim);
+            TextC("UN ŒUF MYSTÈRE...", W / 2, 110, Ink);
+            TextC("TAPOTE-LE POUR", W / 2, 126, Dim);
+            TextC("QU'IL ÉCLOSE !", W / 2, 136, Dim);
         }
         else
         {
-            Tile(4, 58, 64, 40, Coral, Glyphs.IcoPin, "BOWLING", MenuAction.Bowling, null, m.CanPlay);
-            Tile(72, 58, 64, 40, Leaf, Glyphs.IcoSprout, "HERBE", MenuAction.Grass, null, m.CanGrass);
-            Tile(4, 102, 64, 40, Blue, Glyphs.IcoLetter, "VISITE", MenuAction.Go, nameof(MenuPage.Band), !m.Away);
-            Tile(72, 102, 64, 40, Grape, Glyphs.IcoBook, "COLLECTION", MenuAction.Collection, null, true);
+            // de haut en bas : jouer, rendre visite, retrouver ses affaires, prendre soin
+            Tile(4, 85, 64, 38, Coral, Glyphs.IcoPin, "BOWLING", MenuAction.Bowling, null, m.CanPlay);
+            Tile(72, 85, 64, 38, Leaf, Glyphs.IcoSprout, "HERBE", MenuAction.Grass, null, m.CanGrass);
+            Tile(4, 126, 64, 38, Blue, Glyphs.IcoDice, "AU HASARD", MenuAction.SendRandom, null, m.CanSend);
+            Tile(72, 126, 64, 38, Blue, Glyphs.IcoFriends, "LES AMIS", MenuAction.Go, nameof(MenuPage.Band), !m.Away);
 
-            Pill(4, 147, 64, 15, m.Asleep ? Glyphs.IcoSun : Glyphs.IcoMoon, m.Asleep ? "RÉVEIL" : "DODO", MenuAction.SleepWake, !m.Away);
-            Pill(72, 147, 64, 15, Glyphs.IcoHere, "VIENS ICI", MenuAction.CallHere, !m.Away);
+            Pill(4, 168, 76, 15, Glyphs.IcoSmallBook, "COLLECTION", MenuAction.Collection, true, Grape);
+            Pill(84, 168, 52, 15, Glyphs.IcoNotebook, "CARNET", MenuAction.Go, true, Sand, nameof(MenuPage.Carnet));
+
+            Pill(4, 186, 64, 15, m.Asleep ? Glyphs.IcoSun : Glyphs.IcoMoon, m.Asleep ? "RÉVEIL" : "DODO", MenuAction.SleepWake, !m.Away);
+            Pill(72, 186, 64, 15, Glyphs.IcoHere, "VIENS ICI", MenuAction.CallHere, !m.Away);
         }
 
         BottomBar(m);
+    }
+
+    /// <summary>« Post » bleu en haut du menu : invite à rejoindre la bande sur Discord (ouvre l'invitation).</summary>
+    static void Banner(MenuModel m)
+    {
+        ButtonBox(4, 3, W - 8, 24, Blurple, MenuAction.Discord, null, true, out int ox, out int oy);
+        // reflet du haut, plus clair, pour que le bandeau « sorte » du fond
+        Glyphs.DrawTinted(cv!, Glyphs.IcoDiscord, 9 + ox, 9 + oy, White);
+        Text("REJOINS LA BANDE", 24 + ox, 5 + oy, White, Darken(Blurple));
+        Text("SUR DISCORD", 24 + ox, 14 + oy, PixelCanvas.Rgb(214, 220, 255), null);
+        Glyphs.DrawTinted(cv!, Glyphs.IcoArrow, W - 17 + ox, 12 + oy, White);
+        // pastille de notification, comme un message non lu
+        Fill(W - 12, 1, 9, 9, Ink);
+        Fill(W - 11, 2, 7, 7, Cherry);
+        Text("!", W - 9, 3, White, null);
     }
 
     static void BandPage(MenuModel m)
@@ -289,7 +330,7 @@ public sealed class MenuPanel
         SmallTile(72, 35, 64, 20, Amber, Glyphs.IcoSmallLetter, "UN MOT", MenuAction.SendNote, m.CanSend);
 
         int y = 60;
-        int rows = m.GuestName is null ? 6 : 5;
+        int rows = (Footer - (m.GuestName is null ? 2 : 20) - y) / 17;
         if (m.Band.Count == 0) TextC("PERSONNE POUR L'INSTANT", W / 2, y + 30, Dim);
         foreach (var b in m.Band.Take(rows))
         {
@@ -371,9 +412,8 @@ public sealed class MenuPanel
         HLine(0, H - 22, W, Ink);
         Fill(1, H - 21, W - 2, 20, Bar);
         IconButton(5, H - 18, 16, 15, Glyphs.IcoGear, Sand, MenuAction.Go, nameof(MenuPage.Settings), true);
-        IconButton(24, H - 18, 16, 15, Glyphs.IcoNotebook, Sand, MenuAction.Go, nameof(MenuPage.Carnet), !m.Egg);
-        IconButton(43, H - 18, 16, 15, m.Paused ? Glyphs.IcoPlay : Glyphs.IcoPause, Sand, MenuAction.Pause, null, !m.Egg);
-        IconButton(62, H - 18, 16, 15, Glyphs.IcoCross, Cherry, MenuAction.Quit, null, true);
+        IconButton(24, H - 18, 16, 15, m.Paused ? Glyphs.IcoPlay : Glyphs.IcoPause, Sand, MenuAction.Pause, null, !m.Egg);
+        IconButton(43, H - 18, 16, 15, Glyphs.IcoCross, Cherry, MenuAction.Quit, null, true);
         Text("V" + m.Version, W - 6 - PixelFont.Measure("V" + m.Version), H - 14, Dim, null);
     }
 
@@ -444,10 +484,10 @@ public sealed class MenuPanel
         Text(label, x0 + iw + 4, y + (h - 2 - 7) / 2 + oy, White, Darken(on ? col : Grey));
     }
 
-    static void Pill(int x, int y, int w, int h, string[] icon, string label, MenuAction a, bool on, uint? col = null)
+    static void Pill(int x, int y, int w, int h, string[] icon, string label, MenuAction a, bool on, uint? col = null, string? arg = null)
     {
         uint body = on ? col ?? Amber : Grey;
-        ButtonBox(x, y, w, h, body, a, null, on, out int ox, out int oy);
+        ButtonBox(x, y, w, h, body, a, arg, on, out int ox, out int oy);
         bool light = col is uint cc && cc != Amber && cc != Sand;
         uint ink = light ? White : Ink;
         int lw = PixelFont.Measure(label), iw = icon[0].Length, total = iw + 4 + lw;

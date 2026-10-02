@@ -4,6 +4,7 @@ API JSON sous /api, pages publiques /t/{id} et /bande (voir pages.py).
 """
 
 import hashlib
+import os
 import json
 import random
 import re
@@ -17,7 +18,7 @@ from typing import Annotated, Literal, Optional
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import AfterValidator, BaseModel, Field, StringConstraints
 
 import catalogue
@@ -32,7 +33,6 @@ TRENTE_JOURS = 30 * 86400
 MAX_CORPS = 32 * 1024     # octets
 INTERVALLE_HB = 4         # s entre deux heartbeats d'une même tortue
 INSCRIPTIONS_PAR_HEURE = 10
-VISITES_PAR_HEURE = 6
 
 
 def now() -> int:
@@ -396,12 +396,6 @@ def visit(body: DemandeVisite, moi: Moi):
             "SELECT 1 FROM visits WHERE from_id = ? AND state IN ('pending', 'active')", (moi,)
         ).fetchone():
             raise ApiError(409, "deja_en_visite")
-        recentes = c.execute(
-            "SELECT COUNT(*) FROM visits WHERE from_id = ? AND created > ?", (moi, t - 3600)
-        ).fetchone()[0]
-        if recentes >= VISITES_PAR_HEURE:
-            raise ApiError(429, "trop_de_visites")
-
         eligibles = c.execute(
             """
             SELECT t.id, t.name, t.species, t.accept_messages, COALESCE(f.points, 0) AS points
@@ -412,7 +406,7 @@ def visit(body: DemandeVisite, moi: Moi):
               AND t.last_seen >= :seuil
               AND t.status = 'home'
               AND NOT EXISTS (SELECT 1 FROM visits v WHERE v.state IN ('pending', 'active')
-                              AND (v.from_id = t.id OR v.to_id = t.id))
+                              AND v.from_id = t.id)
               AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker = :moi AND b.blocked = t.id)
                                                       OR (b.blocker = t.id AND b.blocked = :moi))
             """,
@@ -611,6 +605,17 @@ def page_tortue(tid: str):
 @app.get("/bande")
 def page_bande():
     return pages.bande(now())
+
+
+@app.get("/discord")
+def discord():
+    """Invitation Discord (bannière du menu de Pépin). L'adresse vient de DISCORD_INVITE : modifiable sans nouvelle version du client."""
+    lien = os.environ.get("DISCORD_INVITE", "").strip()
+    if re.fullmatch(r"https://(discord\.gg|discord\.com/invite)/[\w-]{2,64}", lien):
+        return RedirectResponse(lien, status_code=302)
+    return HTMLResponse("<!doctype html><meta charset=utf-8><title>Discord</title>"
+                        "<p style='font:18px sans-serif;margin:3em auto;max-width:28em'>Le Discord de la bande arrive bientôt.</p>",
+                        status_code=404)
 
 
 @app.get("/api/public/band")

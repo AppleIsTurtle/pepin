@@ -47,7 +47,7 @@ public sealed unsafe class App
     readonly MenuModel menuModel = new();
     bool autostartCached;
     double nextGrassAt = Now + 600;      // première touffe 10 min après le lancement, puis toutes les 40 à 90 min
-    HostVisit? visit;
+    static bool Hosting => HostVisit.Live.Count > 0;
     (int x, int y) leftFrom;           // d'où ma tortue est partie en visite (pour le petit mot)
 
     double lastT, lastSave, lastTopmost, lastWinRefresh, lastCarnet = -500, nextUpdateCheck = 20;
@@ -199,7 +199,7 @@ public sealed unsafe class App
             case WM_DESTROY:
                 if (h != home.Hwnd) break;
                 Save();
-                if (visit is not null) band.AbortNow(visit.Info.Id);
+                foreach (var hv in HostVisit.Live) band.AbortNow(hv.Info.Id);
                 RemoveTray();
                 PostQuitMessage(0);
                 return 0;
@@ -220,8 +220,11 @@ public sealed unsafe class App
         // perception du bureau (fenêtres ~2×/s, applis : AppWatch se limite lui-même)
         if (now - lastWinRefresh > 0.5)
         {
-            Span<nint> own = [home.Hwnd, visit?.Guest.Hwnd ?? 0, 0];
-            win.Refresh(own);
+            Span<nint> own = stackalloc nint[HostVisit.MaxShown + 2];
+            own[0] = home.Hwnd;
+            int n = 1;
+            foreach (var hv in HostVisit.Live) if (hv.Guest is not null && n < own.Length - 1) own[n++] = hv.Guest.Hwnd;
+            win.Refresh(own[..(n + 1)]);
             lastWinRefresh = now;
         }
         apps.Update(now, home.Senses.IdleSeconds, home.Senses.CX, home.Senses.CY);
@@ -264,10 +267,10 @@ public sealed unsafe class App
         home.SetHidden(paused || pet.Current is AwayOnVisit);
         trail.Tick(now, pet, home.Scale, home.Hwnd, !home.Hidden);
 
-        if (bowling.Active && (paused || visit is not null || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) bowling.Stop();
+        if (bowling.Active && (paused || Hosting || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) bowling.Stop();
         bowling.Tick(dt, pet, home.Scale, home.Hwnd);
 
-        if (grass.Active && (paused || visit is not null || bowling.Active || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) grass.Stop();
+        if (grass.Active && (paused || Hosting || bowling.Active || pet.Current is AwayOnVisit or LeaveForVisit or LeaveScreen)) grass.Stop();
         MaybeSpawnGrass(now);
         grass.Tick(dt, home.Scale, home.Hwnd);
         deck.Tick(now);
@@ -277,18 +280,21 @@ public sealed unsafe class App
             if (!menu.Animating) menu.Refresh();
         }
 
-        if (visit is not null)
+        for (int i = HostVisit.Live.Count - 1; i >= 0; i--)
         {
-            uint gdpi = Math.Max(96u, GetDpiForWindow(visit.Guest.Hwnd));
-            visit.Guest.Tick(now, dt, gdpi, sizeLevel);
-            visit.Tick(dt);
-            if (visit.Finished) visit = null;
+            var hv = HostVisit.Live[i];
+            if (hv.Guest is Creature gc)
+            {
+                uint gdpi = Math.Max(96u, GetDpiForWindow(gc.Hwnd));
+                gc.Tick(now, dt, gdpi, sizeLevel);
+            }
+            hv.Tick(dt);
         }
 
         Bubbles();
 
         int fps = pet.Fps;
-        if (visit is not null) fps = Math.Max(fps, visit.Guest.Pet.Fps);
+        foreach (var hv in HostVisit.Live) if (hv.Guest is Creature gc) fps = Math.Max(fps, gc.Pet.Fps);
         fps = Math.Max(fps, Math.Max(bowling.Fps, grass.Fps));
         if (egg is not null) fps = Math.Max(fps, egg.Fps);
         if (pet.Dragging) fps = 60;
@@ -300,7 +306,7 @@ public sealed unsafe class App
         {
             // certaines applis passent devant : on réaffirme « toujours au premier plan »
             SetWindowPos(home.Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-            if (visit is not null) SetWindowPos(visit.Guest.Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            foreach (var hv in HostVisit.Live) if (hv.Guest is Creature gc) SetWindowPos(gc.Hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
             lane.PlaceBelow(home.Hwnd);                          // le décor reste juste sous la tortue
             lastTopmost = now;
         }
@@ -341,10 +347,10 @@ public sealed unsafe class App
         {
             case "visitor":
                 var pet = home.Pet;
-                bool busy = visit is not null || paused || band.Outgoing is not null ||
+                bool busy = paused || band.Outgoing is not null ||
                             pet.Current is AwayOnVisit or LeaveScreen or LeaveForVisit;
                 if (busy) { band.Abort(v.Id); break; }
-                visit = new HostVisit(v, home, band, life, inst);
+                _ = new HostVisit(v, home, band, life, inst);        // s'enregistre dans HostVisit.Live
                 bowling.Stop();                                  // une visite passe avant le jeu
                 grass.Stop();
                 break;
@@ -354,7 +360,7 @@ public sealed unsafe class App
                 break;
 
             case "visit_cancelled":
-                if (visit?.Info.Id == v.Id) visit.Cancel();
+                foreach (var hv in HostVisit.Live) if (hv.Info.Id == v.Id) { hv.Cancel(); break; }
                 break;
         }
     }
@@ -365,7 +371,7 @@ public sealed unsafe class App
         string host = v.Host?.Name ?? "";
         bool noOneHome = v.Reason is not null && item is null;
         band.Outgoing = null;
-        band.Fast = visit is not null;
+        band.Fast = Hosting;
 
         if (noOneHome) life.Write(v.Reason == "personne_a_la_maison" ? $"Visite chez {host} : personne à la maison." : $"Visite chez {host} écourtée.");
         else
@@ -388,7 +394,7 @@ public sealed unsafe class App
     {
         var pet = home.Pet;
         if (paused) TogglePause();
-        if (band.Outgoing is not null || visit is not null || pet.Current is LeaveForVisit or LeaveScreen or AwayOnVisit) return;
+        if (band.Outgoing is not null || Hosting || pet.Current is LeaveForVisit or LeaveScreen or AwayOnVisit) return;
         band.Poke();
         pet.Switch(new LeaveForVisit(to, message));
     }
@@ -405,10 +411,20 @@ public sealed unsafe class App
 
     // ------------------------------------------------------------------ évènements et collection
 
-    void ShowDeck(string title, string subtitle, IReadOnlyDictionary<string, int> collection, IReadOnlyDictionary<string, int>? mine, Species species)
+    /// <summary>
+    /// Ouvre une carte de collection exactement où le menu s'était ouvert (à son centre) ; en la fermant on retrouve le menu,
+    /// sur la page d'où l'on venait.
+    /// </summary>
+    void ShowDeck(string title, string subtitle, IReadOnlyDictionary<string, int> collection, IReadOnlyDictionary<string, int>? mine, Species species,
+                  MenuPage back = MenuPage.Home)
     {
         home.Senses.Update(Now, 0, home.Pet.X, home.Pet.Y);
-        deck.Show(title, subtitle, collection, mine, species, home.Senses.Work, (int)Math.Max(2, Math.Round(3 * DpiScale)));
+        var b = menu.Bounds;
+        var work = home.Senses.Work;
+        int cx = b.W > 0 ? b.X + b.W / 2 : (work.Left + work.Right) / 2, cy = b.W > 0 ? b.Y + b.H / 2 : (work.Top + work.Bottom) / 2;
+        int scale = b.W > 0 ? b.Scale : (int)Math.Max(2, Math.Round(2 * DpiScale));
+        deck.Dismissed = () => menu.Reopen(back);
+        deck.Show(title, subtitle, collection, mine, species, work, scale, cx, cy);
     }
 
     /// <summary>Une touffe d'herbe de temps en temps, quand tout est calme et que tu es là.</summary>
@@ -416,7 +432,7 @@ public sealed unsafe class App
     {
         if (now < nextGrassAt) return;
         var pet = home.Pet;
-        bool calm = life.D.MiniGames && !paused && visit is null && band.Outgoing is null && !bowling.Active && !grass.Active &&
+        bool calm = life.D.MiniGames && !paused && !Hosting && band.Outgoing is null && !bowling.Active && !grass.Active &&
                     !pet.Dragging && pet.Current.Interruptible && !pet.Current.Asleep &&
                     pet.Current is not (AwayOnVisit or LeaveForVisit or LeaveScreen or ComeBack) &&
                     home.Senses.IdleSeconds < 30 && home.Senses.CursorOnSameMonitor &&
@@ -479,7 +495,7 @@ public sealed unsafe class App
         }
         var pet = home.Pet;
         // on attend un moment calme : pas de drag, pas de visite en cours, pas d'éclosion
-        if (readyUpdate is string path && !updating && egg is null && !eggTest && !pet.Dragging && visit is null && band.Outgoing is null &&
+        if (readyUpdate is string path && !updating && egg is null && !eggTest && !pet.Dragging && !Hosting && band.Outgoing is null &&
             pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit or ComeBack))
         {
             updating = true;
@@ -547,9 +563,9 @@ public sealed unsafe class App
 
     // ------------------------------------------------------------------ menu
 
-    bool CanPlay => !bowling.Active && !paused && visit is null && band.Outgoing is null &&
+    bool CanPlay => !bowling.Active && !paused && !Hosting && band.Outgoing is null &&
                     home.Pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
-    bool CanSend => band.Registered && band.Outgoing is null && visit is null &&
+    bool CanSend => band.Registered && band.Outgoing is null && !Hosting &&
                     home.Pet.Current is not (LeaveForVisit or LeaveScreen or AwayOnVisit);
 
     /// <summary>Ouvre le panneau : au-dessus de l'animal (clic droit sur lui) ou du curseur (icône de notification).</summary>
@@ -590,11 +606,12 @@ public sealed unsafe class App
         m.Registered = band.Registered;
         m.SizeLevel = sizeLevel;
         m.Version = Updater.Current.ToString(3);
-        m.BandStatus = !band.Registered ? "CONNEXION…" : !band.Connected ? "HORS LIGNE" : $"{band.Online}/{band.BandSize} EN LIGNE";
+        m.BandStatus = !band.Registered ? "CONNEXION…" : !band.Connected ? "HORS LIGNE" : $"{band.Online}/{band.BandSize} EN LIGNE" + (HostVisit.Live.Count > 0 ? $" - {HostVisit.Live.Count} CHEZ TOI" : "");
         m.Band.Clear();
-        foreach (var t in band.Turtles.OrderByDescending(t => t.Online).Take(6))
+        foreach (var t in band.Turtles.OrderByDescending(t => t.Online).Take(8))
             m.Band.Add(new BandEntry(t.Id, t.Name, t.Online, t.Online && t.Status == "home", SpeciesInfo.Parse(t.Species)));
-        m.GuestName = visit?.Info.From?.Name;
+        m.GuestName = HostVisit.Live.Count > 0 ? HostVisit.Live[^1].Info.From?.Name : null;
+        m.Guests = HostVisit.Live.Count;
         m.Journal.Clear();
         foreach (var j in life.D.Journal.TakeLast(8).Reverse())
         {
@@ -645,7 +662,7 @@ public sealed unsafe class App
                     if (d is null) { pet.Say(Band.ErrorText(err), 3); return; }
                     string tier = Life.TierNames[Math.Clamp(d.Tier, 0, 4)];
                     string sub = d.Friendship > 0 ? $"{tier} - amitié {d.Friendship}" : tier;
-                    ShowDeck($"Collection de {d.Name}", sub, d.Collection, life.D.Collection, SpeciesInfo.Parse(d.Species));
+                    ShowDeck($"Collection de {d.Name}", sub, d.Collection, life.D.Collection, SpeciesInfo.Parse(d.Species), MenuPage.Band);
                 });
                 break;
             case MenuAction.ToggleMiniGames:
@@ -678,15 +695,18 @@ public sealed unsafe class App
                 break;
             }
             case MenuAction.BlockGuest:
-                if (visit?.Info.From?.Id is string gid)
+                if (HostVisit.Live.Count > 0 && HostVisit.Live[^1] is { } last && last.Info.From?.Id is string gid)
                 {
                     band.Block(gid);
-                    band.Abort(visit.Info.Id);
-                    visit.Cancel();
+                    band.Abort(last.Info.Id);
+                    last.Cancel();
                 }
                 break;
             case MenuAction.CarnetPage:
                 if (band.Registered) OpenUrl($"{Net.Base}t/{life.D.BandId}");
+                break;
+            case MenuAction.Discord:
+                OpenUrl($"{Net.Base}discord");
                 break;
             case MenuAction.BandPage:
                 OpenUrl($"{Net.Base}bande");
@@ -735,7 +755,7 @@ public sealed unsafe class App
             grass.Stop();
             deck.Hide();
             // un visiteur ne reste pas si on cache tout
-            if (visit is not null) { band.Abort(visit.Info.Id); visit.Cleanup(); visit = null; }
+            for (int i = HostVisit.Live.Count - 1; i >= 0; i--) { band.Abort(HostVisit.Live[i].Info.Id); HostVisit.Live[i].Cleanup(); }
             // la pause arrête le timer : on rafraîchit l'état « away » tout de suite
             band.Status = "away";
             band.Poke();

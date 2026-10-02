@@ -120,6 +120,7 @@ public static class Preview
         }
 
         Menus(dir);
+        Chocs(dir);
         Eggs(dir);
         SpeciesOverview(dir);
         Console.WriteLine($"écrit dans {Path.GetFullPath(dir)}");
@@ -246,5 +247,25 @@ public static class Preview
         MenuPanel.RenderForPreview(busy, MenuPage.Band).BlitTo(sheet2, gap * 2 + MenuPanel.W, gap);
         MenuPanel.RenderForPreview(egg, MenuPage.Home).BlitTo(sheet2, gap * 3 + MenuPanel.W * 2, gap);
         sheet2.SavePng(Path.Combine(dir, "menu-etats.png"), 3, PixelCanvas.Rgb(60, 72, 92));
+    }
+
+    /// <summary>Le choc entre deux compagnons (jeu de chat) : image par image, pour deux espèces.</summary>
+    static void Chocs(string dir)
+    {
+        var phases = new[] { 0.04f, 0.12f, 0.22f, 0.35f, 0.5f, 0.65f, 0.8f, 0.92f };
+        var species = new[] { Species.Tortue, Species.Herisson };
+        var sheet = new PixelCanvas(phases.Length * (SpeciesArt.CW + 2) + 2, species.Length * (SpeciesArt.CH + 2) + 2);
+        for (int r = 0; r < species.Length; r++)
+            for (int i = 0; i < phases.Length; i++)
+            {
+                var v = new Visual();
+                v.Reset();
+                v.Eyes = Eyes.Spiral; v.Mouth = Mouth.Oh;
+                v.Add(FxKind.Impact, phases[i]);
+                var c = new PixelCanvas(SpeciesArt.CW, SpeciesArt.CH);
+                SpeciesArt.Draw(c, v, species[r]);
+                c.BlitTo(sheet, 2 + i * (SpeciesArt.CW + 2), 2 + r * (SpeciesArt.CH + 2));
+            }
+        sheet.SavePng(Path.Combine(dir, "choc.png"), 4, Bg);
     }
 }

@@ -136,6 +136,11 @@ public static class Glyphs
     public static readonly string[] IcoGlobe = [".###.", "#.#.#", "#####", "#.#.#", ".###."];
     public static readonly string[] IcoPencil = ["....##", "...###", "..###.", ".###..", "###...", "##...."];
     public static readonly string[] IcoNo = [".###.", "#..##", "#.#.#", "##..#", ".###."];
+    public static readonly string[] IcoDiscord =
+        ["..##...##..", ".#########.", "##..###..##", "##..###..##", "###########", ".#########.", "..#.....#.."];
+    public static readonly string[] IcoFriends =
+        ["..##...##..", ".####.####.", "..##...##..", "####.#.####", "####...####"];
+    public static readonly string[] IcoArrow = ["#..", "##.", "###", "##.", "#.."];
     public static readonly string[] StarShape = ["..#..", ".###.", "#####", ".###.", "#...#"];
 
     /// <summary>Comme <see cref="DrawAt"/>, mais '#' prend la couleur <paramref name="ink"/>.</summary>

@@ -22,6 +22,7 @@ public sealed class Pet
     public Bowling? Bowl;                     // mini-jeu de bowling (tortue de la maison seulement)
     public GrassEvent? Grass;                 // évènement « touffe d'herbe » (tortue de la maison seulement)
     public bool IsGuest;                      // tortue d'un ami en visite chez nous
+    public int Slot;                          // rang d'arrivée du visiteur (pour qu'ils ne se posent pas tous au même endroit)
     public Species Species = Species.Tortue;  // ce qu'on dessine (et quelques traits de caractère)
     public SpeciesTraits Traits => SpeciesInfo.Of(Species);
     public Pet? Partner;                      // l'autre tortue pendant une visite
