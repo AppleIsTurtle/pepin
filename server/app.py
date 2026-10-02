@@ -420,7 +420,7 @@ def visit(body: DemandeVisite, moi: Moi):
         ).fetchall()
         if not eligibles:
             raise ApiError(409, "indisponible" if body.to else "personne")
-        hote = random.choices(eligibles, weights=[r["points"] + 1 for r in eligibles])[0]
+        hote = random.choice(eligibles)
 
         message = nettoyer(body.message, 80) if hote["accept_messages"] else None
         duree = random.randint(180, 360)

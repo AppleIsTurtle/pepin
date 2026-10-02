@@ -321,18 +321,18 @@ def test_visite_au_hasard_personne(client, horloge):
     assert r.status_code == 201 and r.json()["visit"]["host"]["id"] == b["id"]
 
 
-def test_tirage_pondere_par_amitie(client, horloge, monkeypatch):
+def test_tirage_uniforme_sans_priorite_aux_amis(client, horloge, monkeypatch):
     a, b, c = inscrire(client), inscrire(client), inscrire(client)
     sql_ecrire(*sorted([a["id"], b["id"]]), 9)
-    vus = {}
+    vus = []
 
-    def choices(pop, weights):
-        vus.update({r["id"]: w for r, w in zip(pop, weights)})
-        return [pop[0]]
+    def choice(pop):
+        vus.extend(r["id"] for r in pop)
+        return pop[0]
 
-    monkeypatch.setattr(serveur.random, "choices", choices)
+    monkeypatch.setattr(serveur.random, "choice", choice)
     assert visiter(client, a).status_code == 201
-    assert vus == {b["id"]: 10, c["id"]: 1}
+    assert sorted(vus) == sorted([b["id"], c["id"]])
 
 
 def sql_ecrire(x, y, pts):
